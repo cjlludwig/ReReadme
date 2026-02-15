@@ -33,7 +33,9 @@
     "check": "tsx script.ts --check",
     "refresh": "tsx script.ts",
     "refresh:interactive": "tsx script.ts --interactive",
-    "help": "tsx script.ts --help"
+    "help": "tsx script.ts --help",
+    "setup": "git submodule update --init --recursive && cd experiments && uv sync",
+    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v"
   },
   "dependencies": {
     "openai": "^5.1.1",

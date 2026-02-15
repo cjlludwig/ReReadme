@@ -343,7 +343,9 @@ async function updateReadme(content: string): Promise<void> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
   try {
     if (await fs.pathExists(OUTPUT_FILE)) {
-      await fs.copy(OUTPUT_FILE, `${OUTPUT_FILE}.backup-${timestamp}`)
+      const ext = path.extname(OUTPUT_FILE)
+      const base = OUTPUT_FILE.slice(0, -ext.length || undefined)
+      await fs.copy(OUTPUT_FILE, `${base}.backup-${timestamp}${ext}`)
       echo(chalk.dim(`📋 Backed up existing ${OUTPUT_FILE}`))
     }
   } catch (error) {
