@@ -5,7 +5,7 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from metrics import SectionHeadersMetric, SectionContentMetric, NpmCommandsMetric
+from metrics import SectionHeadersMetric, SectionContentMetric, KeywordsMetric
 
 
 GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
@@ -32,9 +32,9 @@ def test_section_content(generated_readme):
     assert_test(test_case, [metric])
 
 
-def test_npm_commands(generated_readme):
+def test_keywords(generated_readme):
     """README must include npm install and npm test commands."""
-    metric = NpmCommandsMetric(threshold=1.0)
+    metric = KeywordsMetric(threshold=1.0)
     test_case = LLMTestCase(
         input="Generate a README for express-server",
         actual_output=generated_readme,

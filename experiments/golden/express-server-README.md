@@ -2,93 +2,83 @@
 
 ## Description
 
-A minimal Express.js server with a small Document API backed by MongoDB. Designed for local development and easy experimentation with a lightweight data layer. The project exposes REST endpoints under /api/document to create and retrieve documents.
+Minimal Express.js server with a Document API backed by MongoDB. Designed for local development and experimentation with a lightweight data layer.
 
 ## Getting Started
 
 ### Dependencies
 
-- Node.js and npm
-- MongoDB (running on localhost:27017, as used by the code)
-- Optional: Docker and Visual Studio Code Dev Containers if you want to provision a workspace with MongoDB, Node, and npm via a Dev Container
+- Node.js (use nvm for version management)
+- MongoDB running on `localhost:27017`
+- Docker + VS Code Dev Containers extension (optional)
 
 ### Installation
 
-1) Install dependencies
+1. Install dependencies
 
-- npm install
+   ```shell
+   npm install
+   ```
 
-1) Ensure MongoDB is running locally
+2. Start MongoDB locally
+   - Ensure reachable at `mongodb://localhost:27017`
 
-- MongoDB should be reachable at mongodb://localhost:27017
+3. Start the server
 
-1) Start the server
+   ```shell
+   npm run start
+   ```
 
-- npm run start
-- The server listens on <http://localhost:9000>
+   Server runs on `http://localhost:9000`
 
-1) Development in a Dev Container (optional)
+**Dev Container (optional)**: Open in VS Code and select "Reopen in Container"
 
-- Open this project in VS Code and use Reopen in Container to provision the workspace with MongoDB and Node/NPM.
+## Usage
 
-### Usage
+```shell
+npm run start # Start server on http://localhost:9000
 
-- Start the server
-  - npm run start
-  - URL: <http://localhost:9000/>
+# Health check
+curl http://localhost:9000/
 
-- Common API interactions
-  - Create a document
-    - curl -X POST -H "Content-Type: application/json" -d '{"_id":"doc1","title":"Sample"}' <http://localhost:9000/api/document>
-  - Retrieve a document by ID
-    - curl <http://localhost:9000/api/document/doc1>
-  - Health/Root
-    - curl <http://localhost:9000/>
+# Create document
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"_id":"doc1","title":"Sample"}' \
+  http://localhost:9000/api/document
 
-- Tests
-  - This repository does not include a test suite. If you add tests, follow your usual npm test workflow.
+# Get document by ID
+curl http://localhost:9000/api/document/doc1
+```
 
-## Architecture and Diagrams
+## Architecture
 
-- Overview
-  - Client -> Express server (src/server.js) on port 9000
-  - API router mounted at /api/document (src/controllers/documentController.js)
-  - Service layer (src/services/documentService.js) orchestrates business logic
-  - Data layer
-    - src/data/documentDao.js provides createDocument and queryDocumentById
-    - src/data/mongoDao.js manages MongoDB connection, collection access, and closeDbClient
-  - MongoDB is accessed via the documents collection in database express-server
+```
+Client
+  └─> Express (port 9000)
+      └─> /api/document router
+          └─> documentController
+              └─> documentService
+                  └─> documentDao
+                      └─> mongoDao (MongoClient)
+                          └─> MongoDB (localhost:27017)
+                              └─> express-server.documents
+```
 
-- Simple ASCII diagram
-  - Client
-      -> HTTP to <http://localhost:9000>
-  - Server (Express)
-      -> /api/document
-          -> documentController.js
-              -> documentService.js
-                  -> documentDao.js
-                      -> mongoDao.js (MongoClient, getDocumentsCollection, closeDbClient)
-  - Database: MongoDB (mongodb://localhost:27017)
+**Layer exports:**
 
-- Main exports (external-facing)
-  - Mongo DAO: closeDbClient, getDocumentsCollection (src/data/mongoDao.js)
-  - Document DAO: createDocument, queryDocumentById (src/data/documentDao.js)
-  - Services: getDocument, postDocument (src/services/documentService.js)
-  - Controller Router: router (src/controllers/documentController.js) exported for mounting in Express
+- `mongoDao`: `closeDbClient`, `getDocumentsCollection`
+- `documentDao`: `createDocument`, `queryDocumentById`
+- `documentService`: `getDocument`, `postDocument`
+- `documentController`: Express router
 
 ## References
 
-- Express.js: <https://expressjs.com/>
-- Node.js: <https://nodejs.org/>
-- MongoDB Node.js Driver: <https://www.npmjs.com/package/mongodb>
-- Project repository: <https://github.com/cjlludwig/express-server>
+- [Express.js](https://expressjs.com/)
+- [MongoDB Node.js Driver](https://www.npmjs.com/package/mongodb)
+- [VS Code Dev Container](https://code.visualstudio.com/docs/devcontainers/containers)
 
 ## Help
 
-- MongoDBConnection
-  - Ensure MongoDB is running locally on port 27017 and accessible from the Node process.
-- Dev Container
-  - If using a VS Code Dev Container, ensure Docker daemon is running and you have the Dev Containers extension installed.
-- Common issues
-  - If the API calls return unexpected results, confirm the request payload structure matches what the service expects and that the MongoDB collection is reachable.
-  - The server logs indicate port 9000 and basic startup/shutdown messages; check console output for connection errors to MongoDB.
+- **MongoDB connection**: Confirm MongoDB is running on port 27017 and accessible
+- **Dev Container**: Requires running Docker daemon and Dev Containers extension
+- **API errors**: Verify request payload structure and MongoDB connectivity; check console for connection errors

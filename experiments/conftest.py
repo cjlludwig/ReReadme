@@ -1,12 +1,11 @@
 import os
 import subprocess
-import shutil
 
 import pytest
 
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_DIR = os.path.join(REPO_ROOT, "datasets", "express-server")
+DATASET_DIR = os.path.join(REPO_ROOT, "experiments/datasets", "express-server")
 GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 GOLDEN_PATH = os.path.join(GOLDEN_DIR, "express-server-README.md")
 OUTPUT_FILENAME = "README-generated.md"
@@ -40,10 +39,6 @@ def generated_readme():
                 "npx",
                 "tsx",
                 os.path.join(REPO_ROOT, "script.ts"),
-                "--input",
-                os.path.join(work_dir, "README.md"),
-                "--output",
-                output_path,
             ],
             cwd=work_dir,
             env=env,

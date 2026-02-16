@@ -65,7 +65,7 @@ const DEFAULT_GITINGEST_CONFIGS: GitingestConfig[] = [
     sizeLimit: GITINGEST_SIZE_LIMIT,
     include: ['src/', 'package.json', 'README.md'],
     exclude: ['*.snap', '*generated*'],
-    output: 'gitingest-llm.txt'
+    output: 'gitingest-agents.txt'
   },
   {
     sizeLimit: GITINGEST_SIZE_LIMIT,

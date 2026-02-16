@@ -2,11 +2,11 @@ from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
 
-REQUIRED_COMMANDS = ["npm install", "npm start"]
+REQUIRED_KEYWORDS = ["npm install", "npm start", "http://localhost:9000", "nvm", "Express.js", "MongoDB"]
 
 
-class NpmCommandsMetric(BaseMetric):
-    """Checks that expected npm commands are present in the README output."""
+class KeywordsMetric(BaseMetric):
+    """Checks that expected keywords are present in the README output."""
 
     def __init__(self, threshold: float = 1.0):
         self.threshold = threshold
@@ -21,19 +21,19 @@ class NpmCommandsMetric(BaseMetric):
             found = []
             missing = []
 
-            for cmd in REQUIRED_COMMANDS:
+            for cmd in REQUIRED_KEYWORDS:
                 if cmd.lower() in content:
                     found.append(cmd)
                 else:
                     missing.append(cmd)
 
-            self.score = len(found) / len(REQUIRED_COMMANDS)
+            self.score = len(found) / len(REQUIRED_KEYWORDS)
             self.success = self.score >= self.threshold
 
             if missing:
                 self.reason = f"Missing commands: {', '.join(missing)}"
             else:
-                self.reason = "All required npm commands present."
+                self.reason = "All required keywords present."
 
             return self.score
         except Exception as e:
@@ -50,4 +50,4 @@ class NpmCommandsMetric(BaseMetric):
 
     @property
     def __name__(self):
-        return "NPM Commands"
+        return "Keywords"

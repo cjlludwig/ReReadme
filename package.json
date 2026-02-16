@@ -27,7 +27,7 @@
   },
   "scripts": {
     "dev": "tsx script.ts",
-    "build": "tsc script.ts",
+    "build": "tsc",
     "start": "node script.js",
     "test": "jest script.spec.ts",
     "check": "tsx script.ts --check",
@@ -38,18 +38,18 @@
     "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v"
   },
   "dependencies": {
-    "openai": "^5.1.1",
-    "typescript": "^5.8.3",
-    "zx": "^8.5.5"
+    "openai": "6.22.0",
+    "typescript": "5.9.3",
+    "zx": "8.8.5"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.15.30",
-    "jest": "^30.0.0",
-    "tsx": "^4.19.4"
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.2.3",
+    "jest": "^30.2.0",
+    "tsx": "^4.21.0"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.0.0"
   }
 }

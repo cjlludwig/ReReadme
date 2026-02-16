@@ -15,6 +15,11 @@ Provide steps to install or configure the project for local development or produ
 Include one or two common usage examples that show how developers interact with this project.
 Include information on how to run the test suite.
 
+```shell
+npm run foo # Describe the command 
+# ...
+```
+
 ## Architecture and Diagrams
 (Optional) Embed or link to any available architecture or component diagrams.
 

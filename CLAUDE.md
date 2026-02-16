@@ -55,7 +55,7 @@ The core is a 5-step pipeline in `script.ts` orchestrated by `runWorkflow()`:
 - `script.ts` — All application logic (~700 lines)
 - `script.spec.ts` — Jest test suite
 - `prompts/` — Numbered prompt templates for each AI step
-- `templates/` — README output templates (markdown and LLM formats)
+- `templates/` — README output templates (markdown and AGENTS.md format)
 
 ### System Dependencies
 
