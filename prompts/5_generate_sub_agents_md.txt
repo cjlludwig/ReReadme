@@ -1,4 +1,4 @@
-You're an AI assistant tasked with generating a scoped `README.llm` file for a specific subdirectory (e.g., `./tf/`) within a larger monorepo.
+You're an AI assistant tasked with generating a scoped `AGENTS.md` file for a specific subdirectory (e.g., `./tf/`) within a larger monorepo.
 
 This file should help LLMs understand the purpose, structure, and modification rules specific to the infra or tooling contained in this subdir—without leaking details from unrelated parts of the codebase.
 
@@ -6,7 +6,7 @@ This file should help LLMs understand the purpose, structure, and modification r
 1. Files within the target subdirectory (e.g., Terraform modules, deployment configs, helper scripts)
 2. `gitingest` output scoped to that directory
 3. The repo’s `package.json` if relevant to builds/deployments
-4. The README_TEMPLATE.llm as a base for the `<rules>` block
+4. The AGENTS_TEMPLATE.md as a base for the `<rules>` block
 
 ---
 
@@ -14,7 +14,7 @@ This file should help LLMs understand the purpose, structure, and modification r
 
 ```xml
 <rules>
-  Use the `<rules>` section from `README_TEMPLATE.llm` as a base.
+  Use the `<rules>` section from `AGENTS_TEMPLATE.md` as a base.
   Add any additional Terraform or deployment-specific rules inferred from this subdirectory.
 </rules>
 

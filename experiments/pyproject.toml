@@ -1,0 +1,11 @@
+[project]
+name = "rereadme-eval"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepeval>=1.0.0",
+    "pytest>=7.0.0",
+]
+
+[dependency-groups]
+dev = []
