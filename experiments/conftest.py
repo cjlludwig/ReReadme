@@ -39,6 +39,8 @@ def generated_readme():
                 "npx",
                 "tsx",
                 os.path.join(REPO_ROOT, "script.ts"),
+                "--output",
+                OUTPUT_FILENAME,
             ],
             cwd=work_dir,
             env=env,
