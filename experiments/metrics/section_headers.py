@@ -2,8 +2,7 @@ import re
 from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
-
-REQUIRED_HEADERS = [
+REQUIRED_SECTIONS = [
     "## Description",
     "## Getting Started",
     "### Dependencies",
@@ -28,14 +27,14 @@ class SectionHeadersMetric(BaseMetric):
             found = []
             missing = []
 
-            for header in REQUIRED_HEADERS:
+            for header in REQUIRED_SECTIONS:
                 pattern = rf"^{re.escape(header)}\s*$"
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
                     found.append(header)
                 else:
                     missing.append(header)
 
-            self.score = len(found) / len(REQUIRED_HEADERS)
+            self.score = len(found) / len(REQUIRED_SECTIONS)
             self.success = self.score >= self.threshold
 
             if missing:

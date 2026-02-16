@@ -23,6 +23,10 @@ npm start                          # Run compiled output
 # Test
 npm test                           # Run Jest suite
 
+# Eval (requires Python >= 3.11, uv, OPENAI_API_KEY)
+npm run setup                      # Clone dataset submodule + install Python deps
+npm run eval                       # Run DeepEval quality checks against express-server dataset
+
 # Install globally
 npm link                           # Makes 'rereadme' available as CLI command
 ```
@@ -56,6 +60,15 @@ The core is a 5-step pipeline in `script.ts` orchestrated by `runWorkflow()`:
 - `script.spec.ts` — Jest test suite
 - `prompts/` — Numbered prompt templates for each AI step
 - `templates/` — README output templates (markdown and AGENTS.md format)
+
+### Eval Framework (`experiments/`)
+
+DeepEval-based quality evaluation that runs rereadme against a dataset repo and checks the output. See `experiments/README.md` for full setup, metrics, and golden README workflow.
+
+- **Config**: `experiments/conftest.py` — runs `npx tsx script.ts --output README-generated.md` against `experiments/datasets/express-server`, then cleans up
+- **Tests**: `experiments/test_express_server.py` — deterministic checks (required headers, section content, npm commands) + LLM-as-judge similarity to golden README
+- **Golden files**: `experiments/golden/*` — auto-generated on first run if missing, committed after review
+- **Key detail**: eval writes to `README-generated.md` (not `README.md`) to avoid replacing the dataset's original README
 
 ### System Dependencies
 
