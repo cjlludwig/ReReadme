@@ -24,7 +24,7 @@ test:
 	@echo "==> npm test"
 	npm test
 
-check: lint-ts lint-md lint-py typecheck-ts typecheck-py test
+check: lint-ts lint-md lint-py typecheck-ts typecheck-py
 	@echo "==> All checks passed"
 
 fix:

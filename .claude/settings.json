@@ -1,8 +1,19 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "make check"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "make check"}]
+        "hooks": [{"type": "command", "command": "make test"}]
       }
     ]
   }
