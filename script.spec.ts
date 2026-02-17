@@ -118,22 +118,31 @@ describe("Agent Definitions", () => {
     it("should create all three agents", async () => {
         const agents = await import('./lib/agents.js')
         const result = agents.createAgents('gpt-5-nano', '# Template')
-        expect(result.fileExplorer).toBeDefined()
-        expect(result.contentAnalyzer).toBeDefined()
-        expect(result.readmeWriter).toBeDefined()
+        expect(result.researcher).toBeDefined()
+        expect(result.templateEnforcer).toBeDefined()
+        expect(result.detailFetcher).toBeDefined()
     })
 
     it("should set correct model on agents", async () => {
         const agents = await import('./lib/agents.js')
         const result = agents.createAgents('gpt-4o', '# Template')
-        expect(result.fileExplorer.model).toBe('gpt-4o')
-        expect(result.contentAnalyzer.model).toBe('gpt-4o')
-        expect(result.readmeWriter.model).toBe('gpt-4o')
+        expect(result.researcher.model).toBe('gpt-4o')
+        expect(result.templateEnforcer.model).toBe('gpt-4o')
+        expect(result.detailFetcher.model).toBe('gpt-4o')
     })
 
-    it("should include template in writer instructions", async () => {
+    it("should include template in templateEnforcer instructions", async () => {
         const agents = await import('./lib/agents.js')
         const result = agents.createAgents('gpt-5-nano', '# My Custom Template')
-        expect(result.readmeWriter.instructions).toContain('# My Custom Template')
+        expect(result.templateEnforcer.instructions).toContain('# My Custom Template')
+    })
+
+    it("should wire DetailFetcher as a handoff on TemplateEnforcer", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createAgents('gpt-5-nano', '# Template')
+        const handoffNames = result.templateEnforcer.handoffs.map(
+            (h: { name?: string; agent?: { name: string } }) => h.name ?? h.agent?.name
+        )
+        expect(handoffNames).toContain('DetailFetcher')
     })
 })

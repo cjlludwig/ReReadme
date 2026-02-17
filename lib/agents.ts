@@ -3,13 +3,26 @@ import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { listDirectory, readFile, searchCode, getStructure } from './tools.js';
 
 export function createAgents(model: string, readmeTemplate: string) {
-  // Agents run as a deterministic sequential pipeline in runner.ts.
-  // Each agent completes its work and produces text output for the next.
+  // 2-agent pipeline: Researcher → TemplateEnforcer (with DetailFetcher handoff)
 
-  const readmeWriter = new Agent({
-    name: 'READMEWriter',
+  const detailFetcher = new Agent({
+    name: 'DetailFetcher',
     model,
-    instructions: `You are a technical writer specializing in README documentation. Using the analysis provided in the conversation, generate a complete README.md file.
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a lightweight retrieval agent. You receive a specific question about a repository and fetch only the information needed to answer it.
+
+Rules:
+- Use the tools to find the answer — do not guess or fabricate
+- Return a concise, factual answer — no preamble or commentary
+- Once you have the answer, hand off back to TemplateEnforcer with your findings`,
+    tools: [listDirectory, readFile, searchCode, getStructure],
+    handoffDescription:
+      'Fetch a specific missing fact from the repository (e.g. a port number, an env var name, a dependency version)',
+  });
+
+  const templateEnforcer = new Agent({
+    name: 'TemplateEnforcer',
+    model,
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a technical writer specializing in README documentation. Using the research summary provided in the conversation, generate a complete README.md file.
 
 The template below is your single source of truth for structure, headers, and content guidance. Follow every instruction in it exactly.
 
@@ -19,44 +32,26 @@ ${readmeTemplate}
 Additional rules:
 - Use the exact, verbatim project name from the manifest "name" field (e.g. package.json "name") as the # title — do not humanize or rephrase it
 - You MUST emit every heading from the template using exact markdown syntax. Do not skip or merge headings. The required headings are: ## Description, ## Getting Started, ### Dependencies, ### Installation, ## Usage, ## Architecture, ## References, ## Help
-- Only include information that was discovered by the previous agents — do not fabricate content
+- Only include information that was discovered by the Researcher — do not fabricate content
+- If a required section is missing specific facts (e.g. a port number, an env var, a dependency version), hand off to DetailFetcher to retrieve it. Limit yourself to 3 handoffs.
 - Use clear, concise language for a developer audience
 - Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
     tools: [readFile],
+    handoffs: [detailFetcher],
     handoffDescription:
       'Write the final README using accumulated context',
   });
 
-  const contentAnalyzer = new Agent({
-    name: 'ContentAnalyzer',
+  // Wire the return handoff: DetailFetcher → TemplateEnforcer
+  detailFetcher.handoffs = [templateEnforcer];
+
+  const researcher = new Agent({
+    name: 'Researcher',
     model,
-    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a code analyst. Given information about a repository's structure, your job is to read and analyze the key files to extract:
-- Project name: the exact "name" field from package.json (or equivalent manifest) — this becomes the README title
-- Project purpose and description
-- Dependencies and their roles (name each core technology, e.g. Express.js, MongoDB)
-- Recommended version manager for the runtime — always mention the standard one (nvm for Node.js, pyenv for Python, etc.)
-- Architecture patterns: module layers, how requests flow from entry point to data layer
-- Build, test, and run commands (exact npm scripts or equivalents)
-- API endpoints: core routes and/or a GIST overview for large servers, HTTP method, and example payload. Identify health check / root endpoints (e.g. GET /).
-- Ports and URLs the server listens on (e.g. http://localhost:9000)
-- Configuration and environment requirements
-- Container/dev environment setup if Dockerfiles or .devcontainer exist
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a repository researcher. Your job is to explore the repository structure AND analyze file contents in a single pass. Work in two phases:
 
-Read the files identified in the conversation so far. Focus on extracting factual, specific information. Do not guess or fabricate details. Report your findings as a structured technical summary organized by the template sections below.
-
-The final README will follow this template — ensure your analysis covers information needed for each section:
-${readmeTemplate}
-
-When done, output a structured technical summary covering all template sections.`,
-    tools: [readFile, searchCode, getStructure],
-    handoffDescription:
-      'Analyze file contents to extract technical details',
-  });
-
-  const fileExplorer = new Agent({
-    name: 'FileExplorer',
-    model,
-    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a repository explorer. Your job is to navigate the repository and identify key files that describe the project:
+**Phase 1 — Explore structure**
+Navigate the repository and identify key files:
 - package.json, Cargo.toml, pyproject.toml, go.mod, or other manifest files
 - Entry points and main source files
 - Configuration files (tsconfig, webpack, docker, CI/CD)
@@ -64,16 +59,23 @@ When done, output a structured technical summary covering all template sections.
 - Test files and test configuration
 - Documentation files
 
-Start by listing the root directory, then explore important subdirectories including hidden directories like .devcontainer/. Build a complete map of the project structure. Report your findings as a structured summary of what you found and where.
+Start by listing the root directory, then explore important subdirectories including hidden directories like .devcontainer/.
 
-The final README will follow this template — prioritize finding files relevant to each section:
+**Phase 2 — Extract content**
+Read the files you discovered and extract facts for the README. The template below is the single source of truth for what sections exist, what each section needs, and how the output will be organized. Each template section contains blockquote guidance describing the required content — use that as your checklist.
+
+Do NOT invent your own sections or headings. Organize your findings under the exact headings from the template.
+
+One additional extraction rule not in the template: the project title must be the exact "name" field from the manifest file (package.json, Cargo.toml, etc.) — do not humanize or rephrase it.
+
+README Template:
 ${readmeTemplate}
 
-When done, output a structured summary of discovered files and their relevance.`,
-    tools: [listDirectory, readFile, searchCode],
+When done, output your findings as a structured technical summary using the exact headings from the template above. Under each heading, list the specific facts you found and where you found them (file paths). Do not fabricate details — only report what you actually read.`,
+    tools: [listDirectory, readFile, searchCode, getStructure],
     handoffDescription:
-      'Explore repository structure and find important files',
+      'Explore repository structure and analyze file contents',
   });
 
-  return { fileExplorer, contentAnalyzer, readmeWriter };
+  return { researcher, templateEnforcer, detailFetcher };
 }
