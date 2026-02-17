@@ -14,7 +14,7 @@ export async function runAgentWorkflow(
 ): Promise<string> {
   const { model, inputFile, readmeTemplate, verbose } = options;
 
-  const { fileExplorer, contentAnalyzer, readmeWriter } = createAgents(model, readmeTemplate);
+  const { researcher, templateEnforcer } = createAgents(model, readmeTemplate);
 
   // Build initial prompt with current README if it exists
   let initialPrompt = 'Generate a README.md for this repository.';
@@ -27,45 +27,33 @@ export async function runAgentWorkflow(
       '\n\nThere is no existing README. Create one from scratch based on what you discover in the repository.';
   }
 
-  // Deterministic sequential pipeline: FileExplorer → ContentAnalyzer → READMEWriter
+  // Deterministic sequential pipeline: Researcher → TemplateEnforcer
   const output = await withTrace('ReReadme Agent Workflow', async () => {
-    // Step 1: FileExplorer discovers repo structure
+    // Step 1: Researcher explores repo structure and analyzes file contents
     if (verbose) {
-      console.log(`[agent] Step 1/3: FileExplorer (model: ${model})`);
+      console.log(`[agent] Step 1/2: Researcher (model: ${model})`);
     }
-    const step1 = await run(fileExplorer, initialPrompt, { maxTurns: 50 });
+    const step1 = await run(researcher, initialPrompt, { maxTurns: 70 });
     if (!step1.finalOutput || step1.finalOutput.trim().length === 0) {
-      throw new Error('FileExplorer produced no output');
+      throw new Error('Researcher produced no output');
     }
     if (verbose) {
-      console.log(`[agent] FileExplorer done (${step1.finalOutput.length} chars)`);
+      console.log(`[agent] Researcher done (${step1.finalOutput.length} chars)`);
     }
 
-    // Step 2: ContentAnalyzer reads and analyzes discovered files
+    // Step 2: TemplateEnforcer generates the final README (may hand off to DetailFetcher)
     if (verbose) {
-      console.log(`[agent] Step 2/3: ContentAnalyzer`);
+      console.log(`[agent] Step 2/2: TemplateEnforcer`);
     }
-    const step2 = await run(contentAnalyzer, step1.finalOutput, { maxTurns: 20 });
+    const step2 = await run(templateEnforcer, step1.finalOutput, { maxTurns: 20 });
     if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
-      throw new Error('ContentAnalyzer produced no output');
+      throw new Error('TemplateEnforcer produced no output');
     }
     if (verbose) {
-      console.log(`[agent] ContentAnalyzer done (${step2.finalOutput.length} chars)`);
+      console.log(`[agent] TemplateEnforcer done (${step2.finalOutput.length} chars)`);
     }
 
-    // Step 3: READMEWriter generates the final README
-    if (verbose) {
-      console.log(`[agent] Step 3/3: READMEWriter`);
-    }
-    const step3 = await run(readmeWriter, step2.finalOutput, { maxTurns: 10 });
-    if (!step3.finalOutput || step3.finalOutput.trim().length === 0) {
-      throw new Error('READMEWriter produced no output');
-    }
-    if (verbose) {
-      console.log(`[agent] READMEWriter done (${step3.finalOutput.length} chars)`);
-    }
-
-    return step3.finalOutput;
+    return step2.finalOutput;
   });
 
   // Strip markdown code fences if the model wrapped the output

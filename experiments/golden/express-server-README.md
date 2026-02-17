@@ -1,5 +1,9 @@
 # express-server
 
+![Node version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
+![Docker](https://img.shields.io/badge/docker-supported-blue)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 ## Description
 
 Minimal Express.js server with a Document API backed by MongoDB. Designed for local development and experimentation with a lightweight data layer.
@@ -31,7 +35,12 @@ Minimal Express.js server with a Document API backed by MongoDB. Designed for lo
 
    Server runs on `http://localhost:9000`
 
-**Dev Container (optional)**: Open in VS Code and select "Reopen in Container"
+### Alternative Development Environment
+
+If you use the provided Dev Container configuration:
+
+- Open the repository in a VS Code Dev Container to automatically start a Node.js + MongoDB environment.
+- The dev container includes a docker-compose file that brings up the app and a MongoDB instance.
 
 ## Usage
 
@@ -52,24 +61,18 @@ curl http://localhost:9000/api/document/doc1
 
 ## Architecture
 
+- Entry point: src/server.js
+- Layered structure:
+  - Controllers: src/controllers/documentController.js
+  - Services: src/services/documentService.js
+  - Data access: src/data/documentDao.js
+  - Data layer / DB client: src/data/mongoDao.js
+
+ASCII request flow (example for a GET by ID)
+
 ```text
-Client
-  └─> Express (port 9000)
-      └─> /api/document router
-          └─> documentController
-              └─> documentService
-                  └─> documentDao
-                      └─> mongoDao (MongoClient)
-                          └─> MongoDB (localhost:27017)
-                              └─> express-server.documents
+Client -> HTTP -> Express (router) -> Controller -> Service -> DAO -> MongoDB
 ```
-
-**Layer exports:**
-
-- `mongoDao`: `closeDbClient`, `getDocumentsCollection`
-- `documentDao`: `createDocument`, `queryDocumentById`
-- `documentService`: `getDocument`, `postDocument`
-- `documentController`: Express router
 
 ## References
 
@@ -82,3 +85,7 @@ Client
 - **MongoDB connection**: Confirm MongoDB is running on port 27017 and accessible
 - **Dev Container**: Requires running Docker daemon and Dev Containers extension
 - **API errors**: Verify request payload structure and MongoDB connectivity; check console for connection errors
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

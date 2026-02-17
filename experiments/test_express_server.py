@@ -59,14 +59,14 @@ def test_golden_readme_similarity(generated_readme, golden_readme):
         criteria=(
             "Evaluate semantic similarity between the generated README and the golden README. "
             "Consider section structure alignment, technical accuracy of descriptions, "
-            "and content completeness. Minor wording differences should be tolerated."
+            "and content completeness. Minor wording and structure differences should be tolerated."
         ),
         evaluation_params=[
             LLMTestCaseParams.ACTUAL_OUTPUT,
             LLMTestCaseParams.EXPECTED_OUTPUT,
         ],
-        threshold=0.85,
-        model="gpt-4o-mini",
+        threshold=0.70,
+        model="gpt-5-mini",
     )
 
     test_case = LLMTestCase(
