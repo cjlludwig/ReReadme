@@ -1,4 +1,5 @@
 import { Agent } from '@openai/agents';
+import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { listDirectory, readFile, searchCode, getStructure } from './tools.js';
 
 export function createAgents(model: string, readmeTemplate: string) {
@@ -8,7 +9,6 @@ export function createAgents(model: string, readmeTemplate: string) {
   const readmeWriter = new Agent({
     name: 'READMEWriter',
     model,
-    modelSettings: { temperature: 0 },
     instructions: `You are a technical writer specializing in README documentation. Using the analysis provided in the conversation, generate a complete README.md file.
 
 The template below is your single source of truth for structure, headers, and content guidance. Follow every instruction in it exactly.
@@ -30,7 +30,7 @@ Additional rules:
   const contentAnalyzer = new Agent({
     name: 'ContentAnalyzer',
     model,
-    instructions: `You are a code analyst. Given information about a repository's structure, your job is to read and analyze the key files to extract:
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a code analyst. Given information about a repository's structure, your job is to read and analyze the key files to extract:
 - Project name: the exact "name" field from package.json (or equivalent manifest) — this becomes the README title
 - Project purpose and description
 - Dependencies and their roles (name each core technology, e.g. Express.js, MongoDB)
@@ -57,7 +57,7 @@ When your analysis is complete, hand off to READMEWriter.`,
   const fileExplorer = new Agent({
     name: 'FileExplorer',
     model,
-    instructions: `You are a repository explorer. Your job is to navigate the repository and identify key files that describe the project:
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a repository explorer. Your job is to navigate the repository and identify key files that describe the project:
 - package.json, Cargo.toml, pyproject.toml, go.mod, or other manifest files
 - Entry points and main source files
 - Configuration files (tsconfig, webpack, docker, CI/CD)

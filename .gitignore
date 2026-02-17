@@ -147,5 +147,6 @@ experiments/.pytest_cache/
 experiments/.deepeval_cache/
 experiments/.venv/
 experiments/datasets/express-server/README-generated.md
+experiments/results/
 .deepeval*
 **/__pycache__/**

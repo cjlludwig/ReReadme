@@ -1,5 +1,7 @@
 import os
+import shutil
 import subprocess
+from datetime import datetime
 
 import pytest
 
@@ -55,7 +57,14 @@ def generated_readme():
     with open(output_path, "r") as f:
         content = f.read()
 
-    # Clean up generated file
+    # Back up generated file for inspection
+    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    os.makedirs(results_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    backup_path = os.path.join(results_dir, f"express-server-{timestamp}.md")
+    shutil.copy2(output_path, backup_path)
+
+    # Clean up generated file from dataset dir
     os.remove(output_path)
 
     return content
