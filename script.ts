@@ -9,11 +9,12 @@ import { runAgentWorkflow } from './lib/runner.js'
 const SCRIPT_FILE = fileURLToPath(import.meta.url)
 const SCRIPT_DIR = path.dirname(SCRIPT_FILE)
 
-// Configuration
-$.verbose = argv.verbose || false
-const OPENAI_MODEL = argv.model || 'gpt-5-nano'
-const INPUT_FILE = argv.input || 'README.md'
-const OUTPUT_FILE = argv.output || 'README.md'
+// Configuration — argv is typed as Record<string, unknown> by zx
+const args = argv as Record<string, unknown>
+$.verbose = Boolean(args.verbose)
+const OPENAI_MODEL = typeof args.model === 'string' ? args.model : 'gpt-5-nano'
+const INPUT_FILE = typeof args.input === 'string' ? args.input : 'README.md'
+const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
 
 export async function checkDependencies(): Promise<boolean> {
   echo(chalk.blue('🔍 Checking dependencies...'))
@@ -29,7 +30,7 @@ export async function checkDependencies(): Promise<boolean> {
       echo(chalk.red('❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli OR brew install markdownlint-cli'))
       allGood = false
     }
-  } catch (error) {
+  } catch {
     echo(chalk.red('❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli OR brew install markdownlint-cli'))
     allGood = false
   }
@@ -52,7 +53,7 @@ async function readFile(filePath: string): Promise<string> {
     }
     throw new Error(`File does not exist: ${filePath}`)
   } catch (error) {
-    throw new Error(`Failed to read file: ${filePath}`)
+    throw new Error(`Failed to read file: ${filePath}`, { cause: error })
   }
 }
 
@@ -66,8 +67,9 @@ export async function updateReadme(content: string): Promise<void> {
       await fs.copy(OUTPUT_FILE, `${base}.backup-${timestamp}${ext}`)
       echo(chalk.dim(`📋 Backed up existing ${OUTPUT_FILE}`))
     }
-  } catch (error) {
-    echo(chalk.yellow(`⚠️  Could not backup ${OUTPUT_FILE}: ${error}`))
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    echo(chalk.yellow(`⚠️  Could not backup ${OUTPUT_FILE}: ${msg}`))
   }
 
   // Write new README
@@ -111,7 +113,7 @@ export async function runWorkflow(): Promise<void> {
       throw new Error('Missing required dependencies')
     }
 
-    if (argv.interactive) {
+    if (args.interactive) {
       const shouldContinue = await question('Dependencies OK. Start agent workflow? (y/n): ')
       if (shouldContinue.toLowerCase() !== 'y') {
         echo(chalk.yellow('Aborted.'))
@@ -128,13 +130,13 @@ export async function runWorkflow(): Promise<void> {
       model: OPENAI_MODEL,
       inputFile: INPUT_FILE,
       readmeTemplate,
-      verbose: argv.verbose,
+      verbose: Boolean(args.verbose),
     })
 
     // Update README (with backup)
     await updateReadme(readmeContent)
 
-    if (argv.interactive) {
+    if (args.interactive) {
       const shouldFormat = await question('README updated. Format with markdownlint? (y/n): ')
       if (shouldFormat.toLowerCase() !== 'y') {
         echo(chalk.green('🎉 README refresh completed (skipped formatting)'))
@@ -154,7 +156,7 @@ export async function runWorkflow(): Promise<void> {
   }
 }
 
-export async function showHelp(): Promise<void> {
+export function showHelp(): void {
   echo(`
 ${chalk.blue('rereadme')} - Automatically update README files with current project context
 
@@ -190,12 +192,12 @@ ${chalk.yellow('Examples:')}
 }
 
 async function main(): Promise<void> {
-  if (argv.help || argv.h) {
-    await showHelp()
+  if (args.help || args.h) {
+    showHelp()
     return
   }
 
-  if (argv.check) {
+  if (args.check) {
     const depsOk = await checkDependencies()
     process.exit(depsOk ? 0 : 1)
     return
@@ -205,7 +207,8 @@ async function main(): Promise<void> {
 }
 
 // Run the main function
-main().catch((error) => {
-  echo(chalk.red('💥 Fatal error:'), error.message)
+main().catch((error: unknown) => {
+  const msg = error instanceof Error ? error.message : String(error)
+  echo(chalk.red('💥 Fatal error:'), msg)
   process.exit(1)
 })

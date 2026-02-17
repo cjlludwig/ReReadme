@@ -1,12 +1,8 @@
 .PHONY: lint-ts lint-md lint-py typecheck-ts typecheck-py test check fix
 
 lint-ts:
-	@if npx eslint --version >/dev/null 2>&1 && ([ -f eslint.config.* ] || [ -f .eslintrc* ]); then \
-		echo "==> ESLint"; \
-		npx eslint '**/*.ts' --ignore-pattern dist/; \
-	else \
-		echo "==> lint-ts: skipped (eslint not configured)"; \
-	fi
+	@echo "==> ESLint"
+	npx eslint
 
 lint-md:
 	@echo "==> markdownlint"
@@ -32,6 +28,8 @@ check: lint-ts lint-md lint-py typecheck-ts typecheck-py test
 	@echo "==> All checks passed"
 
 fix:
+	@echo "==> eslint --fix"
+	npx eslint --fix || true
 	@echo "==> markdownlint --fix"
 	markdownlint --fix '**/*.md' --ignore node_modules --ignore experiments/datasets --ignore experiments/results --ignore templates || true
 	@echo "==> ruff --fix"

@@ -2,7 +2,7 @@
   "hooks": {
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "make test"}]
+        "hooks": [{"type": "command", "command": "make check"}]
       }
     ]
   }
