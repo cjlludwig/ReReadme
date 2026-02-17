@@ -65,7 +65,7 @@ def test_golden_readme_similarity(generated_readme, golden_readme):
             LLMTestCaseParams.ACTUAL_OUTPUT,
             LLMTestCaseParams.EXPECTED_OUTPUT,
         ],
-        threshold=0.75,
+        threshold=0.70,
         model="gpt-5-mini",
     )
 

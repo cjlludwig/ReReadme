@@ -35,7 +35,12 @@ Minimal Express.js server with a Document API backed by MongoDB. Designed for lo
 
    Server runs on `http://localhost:9000`
 
-**Dev Container (optional)**: Open in VS Code and select "Reopen in Container"
+### Alternative Development Environment
+
+If you use the provided Dev Container configuration:
+
+- Open the repository in a VS Code Dev Container to automatically start a Node.js + MongoDB environment.
+- The dev container includes a docker-compose file that brings up the app and a MongoDB instance.
 
 ## Usage
 
