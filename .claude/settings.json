@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "make test"}]
+      }
+    ]
+  }
+}

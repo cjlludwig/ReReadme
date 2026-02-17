@@ -79,6 +79,25 @@ DeepEval-based quality evaluation that runs rereadme against a dataset repo and 
 - `markdownlint-cli` (npm global or Homebrew) — markdown formatting
 - `OPENAI_API_KEY` environment variable required
 
+## Quality Gate
+
+A `Makefile` at the repo root drives all quality checks:
+
+| Target | What it runs |
+|---|---|
+| `make lint-ts` | ESLint if configured (skips if no config) |
+| `make lint-md` | markdownlint on all `*.md` files |
+| `make lint-py` | `ruff check` on `experiments/` |
+| `make typecheck-ts` | `tsc --noEmit` |
+| `make typecheck-py` | `mypy` on `experiments/` |
+| `make test` | `npm test` (Jest) |
+| `make check` | All of the above, sequentially, fail-fast |
+| `make fix` | Auto-fix: `markdownlint --fix` + `ruff --fix` |
+
+- **Claude Code hook**: `PostToolUse` in `.claude/settings.json` runs `make check` after every Write/Edit/MultiEdit
+- **Pre-commit hook**: `.git/hooks/pre-commit` runs `make check` (one-time setup: `chmod +x .git/hooks/pre-commit`)
+- **Python dev deps**: ruff and mypy added to `experiments/pyproject.toml` dev group — install with `cd experiments && uv sync`
+
 ## Reminders
 
 - Update CLAUDE.md as key details are found.
