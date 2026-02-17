@@ -24,14 +24,6 @@ def generated_readme():
     if os.path.exists(output_path):
         os.remove(output_path)
 
-    # Build a clean environment without the venv so script.ts finds system
-    # Python (which has gitingest installed).
-    env = os.environ.copy()
-    env.pop("VIRTUAL_ENV", None)
-    venv_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "bin")
-    path_dirs = [d for d in env.get("PATH", "").split(os.pathsep) if d != venv_bin]
-    env["PATH"] = os.pathsep.join(path_dirs)
-
     # Run rereadme as subprocess
     try:
         result = subprocess.run(
@@ -43,7 +35,6 @@ def generated_readme():
                 OUTPUT_FILENAME,
             ],
             cwd=work_dir,
-            env=env,
             timeout=300,
             capture_output=True,
             text=True,

@@ -17,7 +17,7 @@ function safePath(relativePath: string): string {
 export const listDirectory = tool({
   name: 'list_directory',
   description:
-    'List files and folders in a directory. Returns names with / suffix for directories.',
+    'List files and folders in a directory. Returns names with / suffix for directories. Hidden dirs like .devcontainer/ are included; .git and node_modules are excluded.',
   parameters: z.object({
     path: z
       .string()
@@ -27,8 +27,9 @@ export const listDirectory = tool({
   execute: async (input) => {
     const dirPath = safePath(input.path);
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const EXCLUDED = new Set(['.git', 'node_modules']);
     return entries
-      .filter((e) => !e.name.startsWith('.') && e.name !== 'node_modules')
+      .filter((e) => !EXCLUDED.has(e.name))
       .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
       .join('\n');
   },
@@ -42,12 +43,10 @@ export const readFile = tool({
     path: z.string().describe('Relative path from repo root'),
     offset: z
       .number()
-      .optional()
       .default(0)
       .describe('Line number to start reading from (0-based)'),
     maxLines: z
       .number()
-      .optional()
       .default(500)
       .describe('Maximum number of lines to return'),
   }),
@@ -75,8 +74,8 @@ export const searchCode = tool({
     pattern: z.string().describe('Search pattern (basic regex)'),
     glob: z
       .string()
-      .optional()
-      .describe('File glob pattern to filter, e.g. "*.ts"'),
+      .default('')
+      .describe('File glob pattern to filter, e.g. "*.ts". Empty string for no filter.'),
   }),
   execute: async (input) => {
     const includeFlag = input.glob ? `--include="${input.glob}"` : '';
