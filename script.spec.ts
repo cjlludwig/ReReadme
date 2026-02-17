@@ -1,8 +1,8 @@
-import { jest, expect, describe, it, beforeEach } from '@jest/globals'
+import { expect, describe, it, beforeEach } from '@jest/globals'
 
 // Helper: invoke a tool from the agents SDK
 // Tools use .invoke(context, jsonString) -> string
-async function invokeTool(tool: any, params: Record<string, unknown>): Promise<string> {
+async function invokeTool(tool: { invoke: (ctx: null, params: string) => Promise<string> }, params: Record<string, unknown>): Promise<string> {
     return tool.invoke(null, JSON.stringify(params))
 }
 

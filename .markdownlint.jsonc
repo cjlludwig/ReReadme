@@ -1,0 +1,6 @@
+{
+  // Line length is impractical for documentation prose
+  "MD013": false,
+  // Allow compact table style (no spaces around pipes)
+  "MD060": false
+}

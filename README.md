@@ -16,6 +16,7 @@ The rereadme tool automates the process of keeping README files current by:
 ### Dependencies
 
 **Required System Tools:**
+
 ```shell
 # Context gathering tool
 pip install gitingest
@@ -27,6 +28,7 @@ brew install markdownlint-cli      # Alternative: Homebrew (macOS/Linux)
 ```
 
 **For pyenv users:**
+
 ```shell
 # Install in current pyenv environment
 python -m pip install gitingest
@@ -37,12 +39,15 @@ export PATH="$HOME/.pyenv/shims:$PATH"
 ```
 
 **Environment Variables:**
+
 - `OPENAI_API_KEY` - Your OpenAI API key for processing README content
 
 **Optional Setup:**
+
 - Confluence MCP integration for external documentation sources
 
 **Troubleshooting Dependencies:**
+
 - Run `rereadme --check` to verify all tools are installed correctly (or `npm run check` if using locally)
 - For markdownlint issues, try the npm version: `npm install -g markdownlint-cli`
 
@@ -139,7 +144,7 @@ The tool is built using:
 
 ### Project Structure
 
-```
+```text
 rereadme/
 ├── script.ts              # Main CLI application
 ├── lib/

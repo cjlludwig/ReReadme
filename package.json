@@ -35,23 +35,28 @@
     "refresh:interactive": "tsx script.ts --interactive",
     "help": "tsx script.ts --help",
     "setup": "git submodule update --init --recursive && cd experiments && uv sync",
-    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v"
+    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v",
+    "prepare": "husky"
   },
   "dependencies": {
     "@openai/agents": "0.4.10",
-    "openai": "6.22.0",
     "typescript": "5.9.3",
     "zod": "4.3.6",
     "zx": "8.8.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@swc/core": "^1.15.11",
     "@swc/jest": "^0.2.39",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.2.3",
+    "depcheck": "^1.4.7",
+    "eslint": "^10.0.0",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "typescript-eslint": "^8.56.0"
   },
   "engines": {
     "node": ">=22.0.0"

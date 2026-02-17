@@ -19,6 +19,7 @@ class SectionContentMetric(BaseMetric):
 
     def measure(self, test_case: LLMTestCase) -> float:
         try:
+            assert test_case.actual_output is not None
             content = test_case.actual_output
             sections_with_content = []
             empty_sections = []
@@ -48,8 +49,8 @@ class SectionContentMetric(BaseMetric):
 
     def is_successful(self) -> bool:
         if self.error is not None:
-            self.success = False
-        return self.success
+            return False
+        return bool(self.success)
 
     @property
     def __name__(self):

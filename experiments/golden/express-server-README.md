@@ -52,7 +52,7 @@ curl http://localhost:9000/api/document/doc1
 
 ## Architecture
 
-```
+```text
 Client
   └─> Express (port 9000)
       └─> /api/document router
