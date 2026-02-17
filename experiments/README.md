@@ -53,4 +53,4 @@ Requires `OPENAI_API_KEY` set in environment (used by both rereadme and the GEva
 
 ## CI (Planned)
 
-See `.github/workflows/eval.yml.todo` for the planned CI workflow that runs evaluations on PRs touching `script.ts`, `prompts/**`, or `templates/**`.
+See `.github/workflows/eval.yml.todo` for the planned CI workflow that runs evaluations on PRs touching `script.ts`, `lib/**`, or `templates/**`.

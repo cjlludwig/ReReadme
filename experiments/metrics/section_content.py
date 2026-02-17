@@ -1,7 +1,7 @@
 import re
 from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
-from section_content import REQUIRED_SECTIONS
+from .section_headers import REQUIRED_SECTIONS
 
 
 MIN_CONTENT_LENGTH = 20

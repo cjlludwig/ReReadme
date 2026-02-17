@@ -128,24 +128,6 @@ The tool executes the following automated workflow:
 4. **Formatting** - Applies consistent markdown formatting
 5. **Cleanup** - Removes temporary files (unless `--keep-context` is used)
 
-### Manual Workflow (Alternative)
-
-If you prefer manual control, you can run the individual steps:
-
-```shell
-# 1. Generate context files
-gitingest -s 50000 -i src/,README.md,package.json -e "*.snap,*generated*" -o gitingest-output.txt
-gitingest -s 50000 -i tf/,k8s-tf/,deployment_manifest.yaml,package.json -e ".tf*" -o gitingest-output-tf.txt
-
-# 2. Process prompts manually in OpenAI
-# - Use prompts/1_prep_readme.txt
-# - Use prompts/2_external_sources.txt  
-# - Use prompts/3_gitingest.txt
-
-# 3. Format final result
-markdownlint -f README.md
-```
-
 ## Architecture
 
 The tool is built using:
@@ -160,10 +142,10 @@ The tool is built using:
 ```
 rereadme/
 ├── script.ts              # Main CLI application
-├── prompts/               # AI prompt templates
-│   ├── 1_prep_readme.txt  # README standardization
-│   ├── 2_external_sources.txt # External docs integration
-│   └── 3_gitingest.txt    # Codebase analysis integration
+├── lib/
+│   ├── agents.ts          # Agent definitions (FileExplorer, ContentAnalyzer, READMEWriter, Orchestrator)
+│   ├── runner.ts          # runAgentWorkflow() entry point
+│   └── tools.ts           # Filesystem tools for agents
 ├── templates/             # Output templates
 └── package.json           # Dependencies and scripts
 ```
