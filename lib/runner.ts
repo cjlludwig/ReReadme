@@ -14,7 +14,7 @@ export async function runAgentWorkflow(
 ): Promise<string> {
   const { model, inputFile, readmeTemplate, verbose } = options;
 
-  const { orchestrator } = createAgents(model, readmeTemplate);
+  const { fileExplorer } = createAgents(model, readmeTemplate);
 
   // Build initial prompt with current README if it exists
   let initialPrompt = 'Generate a README.md for this repository.';
@@ -28,11 +28,11 @@ export async function runAgentWorkflow(
   }
 
   if (verbose) {
-    console.log(`[agent] Starting orchestrator with model: ${model}`);
+    console.log(`[agent] Starting FileExplorer with model: ${model}`);
     console.log(`[agent] Input file: ${inputFile}`);
   }
 
-  const result = await run(orchestrator, initialPrompt, { maxTurns: 30 });
+  const result = await run(fileExplorer, initialPrompt, { maxTurns: 40 });
 
   if (verbose) {
     console.log(`[agent] Final agent: ${result.lastAgent?.name}`);

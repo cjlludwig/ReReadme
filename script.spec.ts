@@ -22,10 +22,11 @@ describe("Filesystem Tools", () => {
             expect(result).toContain('lib/')
         })
 
-        it("should not include hidden files or node_modules", async () => {
+        it("should not include .git or node_modules but should include other dotfiles", async () => {
             const result = await invokeTool(tools.listDirectory, { path: '.' })
             expect(result).not.toContain('node_modules')
-            expect(result).not.toContain('.git')
+            expect(result).not.toContain('.git/')
+            expect(result).toContain('.gitignore')
         })
 
         it("should list subdirectory contents", async () => {
@@ -114,10 +115,9 @@ describe("Agent Definitions", () => {
         expect(typeof agents.createAgents).toBe('function')
     })
 
-    it("should create all four agents", async () => {
+    it("should create all three agents", async () => {
         const agents = await import('./lib/agents.js')
         const result = agents.createAgents('gpt-5-nano', '# Template')
-        expect(result.orchestrator).toBeDefined()
         expect(result.fileExplorer).toBeDefined()
         expect(result.contentAnalyzer).toBeDefined()
         expect(result.readmeWriter).toBeDefined()
