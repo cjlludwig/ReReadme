@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from deepeval import assert_test
+from deepeval import assert_test  # type: ignore[attr-defined]
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
