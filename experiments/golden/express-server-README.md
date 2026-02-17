@@ -8,7 +8,7 @@ Minimal Express.js server with a Document API backed by MongoDB. Designed for lo
 
 ### Dependencies
 
-- Node.js (use nvm for version management)
+- Node.js
 - MongoDB running on `localhost:27017`
 - Docker + VS Code Dev Containers extension (optional)
 

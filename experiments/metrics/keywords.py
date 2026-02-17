@@ -2,7 +2,7 @@ from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
 
-REQUIRED_KEYWORDS = ["npm install", "npm start", "http://localhost:9000", "nvm", "Express.js", "MongoDB"]
+REQUIRED_KEYWORDS = ["npm install", "npm start", "http://localhost:9000", "Node.js", "Express.js", "MongoDB"]
 
 
 class KeywordsMetric(BaseMetric):
