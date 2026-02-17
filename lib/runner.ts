@@ -1,4 +1,4 @@
-import { run } from '@openai/agents';
+import { run, withTrace } from '@openai/agents';
 import { createAgents } from './agents.js';
 import * as fs from 'node:fs';
 
@@ -14,7 +14,7 @@ export async function runAgentWorkflow(
 ): Promise<string> {
   const { model, inputFile, readmeTemplate, verbose } = options;
 
-  const { fileExplorer } = createAgents(model, readmeTemplate);
+  const { fileExplorer, contentAnalyzer, readmeWriter } = createAgents(model, readmeTemplate);
 
   // Build initial prompt with current README if it exists
   let initialPrompt = 'Generate a README.md for this repository.';
@@ -27,22 +27,46 @@ export async function runAgentWorkflow(
       '\n\nThere is no existing README. Create one from scratch based on what you discover in the repository.';
   }
 
-  if (verbose) {
-    console.log(`[agent] Starting FileExplorer with model: ${model}`);
-    console.log(`[agent] Input file: ${inputFile}`);
-  }
+  // Deterministic sequential pipeline: FileExplorer → ContentAnalyzer → READMEWriter
+  const output = await withTrace('ReReadme Agent Workflow', async () => {
+    // Step 1: FileExplorer discovers repo structure
+    if (verbose) {
+      console.log(`[agent] Step 1/3: FileExplorer (model: ${model})`);
+    }
+    const step1 = await run(fileExplorer, initialPrompt, { maxTurns: 50 });
+    if (!step1.finalOutput || step1.finalOutput.trim().length === 0) {
+      throw new Error('FileExplorer produced no output');
+    }
+    if (verbose) {
+      console.log(`[agent] FileExplorer done (${step1.finalOutput.length} chars)`);
+    }
 
-  const result = await run(fileExplorer, initialPrompt, { maxTurns: 40 });
+    // Step 2: ContentAnalyzer reads and analyzes discovered files
+    if (verbose) {
+      console.log(`[agent] Step 2/3: ContentAnalyzer`);
+    }
+    const step2 = await run(contentAnalyzer, step1.finalOutput, { maxTurns: 20 });
+    if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
+      throw new Error('ContentAnalyzer produced no output');
+    }
+    if (verbose) {
+      console.log(`[agent] ContentAnalyzer done (${step2.finalOutput.length} chars)`);
+    }
 
-  if (verbose) {
-    console.log(`[agent] Final agent: ${result.lastAgent?.name}`);
-  }
+    // Step 3: READMEWriter generates the final README
+    if (verbose) {
+      console.log(`[agent] Step 3/3: READMEWriter`);
+    }
+    const step3 = await run(readmeWriter, step2.finalOutput, { maxTurns: 10 });
+    if (!step3.finalOutput || step3.finalOutput.trim().length === 0) {
+      throw new Error('READMEWriter produced no output');
+    }
+    if (verbose) {
+      console.log(`[agent] READMEWriter done (${step3.finalOutput.length} chars)`);
+    }
 
-  const output = result.finalOutput;
-
-  if (!output || typeof output !== 'string' || output.trim().length === 0) {
-    throw new Error('Agent workflow produced no output');
-  }
+    return step3.finalOutput;
+  });
 
   // Strip markdown code fences if the model wrapped the output
   let cleaned = output.trim();

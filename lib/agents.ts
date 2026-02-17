@@ -3,8 +3,8 @@ import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { listDirectory, readFile, searchCode, getStructure } from './tools.js';
 
 export function createAgents(model: string, readmeTemplate: string) {
-  // Agents are wired as a handoff chain: FileExplorer → ContentAnalyzer → READMEWriter
-  // Each agent completes its work, then hands off to the next via handoffs.
+  // Agents run as a deterministic sequential pipeline in runner.ts.
+  // Each agent completes its work and produces text output for the next.
 
   const readmeWriter = new Agent({
     name: 'READMEWriter',
@@ -47,9 +47,8 @@ Read the files identified in the conversation so far. Focus on extracting factua
 The final README will follow this template — ensure your analysis covers information needed for each section:
 ${readmeTemplate}
 
-When your analysis is complete, hand off to READMEWriter.`,
+When done, output a structured technical summary covering all template sections.`,
     tools: [readFile, searchCode, getStructure],
-    handoffs: [readmeWriter],
     handoffDescription:
       'Analyze file contents to extract technical details',
   });
@@ -70,9 +69,8 @@ Start by listing the root directory, then explore important subdirectories inclu
 The final README will follow this template — prioritize finding files relevant to each section:
 ${readmeTemplate}
 
-When your exploration is complete, hand off to ContentAnalyzer.`,
+When done, output a structured summary of discovered files and their relevance.`,
     tools: [listDirectory, readFile, searchCode],
-    handoffs: [contentAnalyzer],
     handoffDescription:
       'Explore repository structure and find important files',
   });
