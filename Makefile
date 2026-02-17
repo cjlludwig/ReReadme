@@ -1,4 +1,4 @@
-.PHONY: lint-ts lint-md lint-py typecheck-ts typecheck-py test check fix
+.PHONY: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py test check fix
 
 lint-ts:
 	@echo "==> ESLint"
@@ -24,7 +24,15 @@ test:
 	@echo "==> npm test"
 	npm test
 
-check: lint-ts lint-md lint-py typecheck-ts typecheck-py
+deps-ts:
+	@echo "==> depcheck"
+	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core" --ignore-patterns="dist,experiments"
+
+deps-py:
+	@echo "==> deptry"
+	cd experiments && uv run deptry .
+
+check: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py
 	@echo "==> All checks passed"
 
 fix:

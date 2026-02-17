@@ -40,7 +40,6 @@
   },
   "dependencies": {
     "@openai/agents": "0.4.10",
-    "openai": "6.22.0",
     "typescript": "5.9.3",
     "zod": "4.3.6",
     "zx": "8.8.5"
@@ -52,6 +51,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.2.3",
+    "depcheck": "^1.4.7",
     "eslint": "^10.0.0",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
