@@ -35,6 +35,8 @@ Additional rules:
 - Only include information that was discovered by the Researcher — do not fabricate content
 - If a required section is missing specific facts (e.g. a port number, an env var, a dependency version), hand off to DetailFetcher to retrieve it. Limit yourself to 3 handoffs.
 - Use clear, concise language for a developer audience
+- DISTILL the research into polished README content. Strip all researcher artifacts: "File references:", "What I found:", source-file citations, notes-to-self, and any raw analysis scaffolding. The reader should see only clean documentation, never the research process.
+- Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
 - Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
     tools: [readFile],
     handoffs: [detailFetcher],
