@@ -11,12 +11,20 @@ Requires Python >= 3.11 and [uv](https://docs.astral.sh/uv/).
 npm run setup
 ```
 
-This clones the test dataset submodule and installs Python dependencies via `uv sync`.
+This clones the test dataset submodules and installs Python dependencies via `uv sync`.
 
 ## Running Evaluations
 
+Run all experiments:
+
 ```bash
 npm run eval
+```
+
+Run a single experiment:
+
+```bash
+npm run eval:rereadme
 ```
 
 Or directly:
@@ -24,9 +32,20 @@ Or directly:
 ```bash
 cd experiments
 uv run deepeval test run test_express_server.py -v
+uv run deepeval test run test_rereadme.py -v
 ```
 
 Requires `OPENAI_API_KEY` set in environment (used by both rereadme and the GEval LLM judge).
+
+## Experiments
+
+### express-server (`test_express_server.py`)
+
+Runs rereadme against a Node.js/Express/MongoDB sample project. Keywords checked: `npm install`, `npm start`, `http://localhost:9000`, `Node.js`, `Express.js`, `MongoDB`.
+
+### rereadme (`test_rereadme.py`)
+
+Runs rereadme against its own repository (self-referencing submodule). Keywords checked: `npm install`, `npm run dev`, `OPENAI_API_KEY`, `TypeScript`, `OpenAI Agents SDK`, `markdownlint`.
 
 ## Metrics
 

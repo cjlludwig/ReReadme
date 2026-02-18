@@ -1,3 +1,6 @@
 [submodule "experiments/datasets/express-server"]
 	path = experiments/datasets/express-server
 	url = https://github.com/cjlludwig/express-server
+[submodule "experiments/datasets/rereadme"]
+	path = experiments/datasets/rereadme
+	url = https://github.com/cjlludwig/readme-refresh

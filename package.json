@@ -34,8 +34,9 @@
     "refresh": "tsx script.ts",
     "refresh:interactive": "tsx script.ts --interactive",
     "help": "tsx script.ts --help",
-    "setup": "git submodule update --init --recursive && cd experiments && uv sync",
-    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v",
+    "setup": "git submodule update --init experiments/datasets/express-server experiments/datasets/rereadme && cd experiments && uv sync",
+    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py test_rereadme.py -v",
+    "eval:rereadme": "cd experiments && NO_COLOR=1 uv run deepeval test run test_rereadme.py -v",
     "prepare": "husky"
   },
   "dependencies": {

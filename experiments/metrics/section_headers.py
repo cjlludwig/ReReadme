@@ -14,8 +14,9 @@ REQUIRED_SECTIONS = [
 class SectionHeadersMetric(BaseMetric):
     """Checks that all required markdown section headers are present."""
 
-    def __init__(self, threshold: float = 1.0):
+    def __init__(self, threshold: float = 1.0, sections: list[str] | None = None):
         self.threshold = threshold
+        self.sections = sections if sections is not None else REQUIRED_SECTIONS
         self.score = 0.0
         self.success = False
         self.reason = ""
@@ -28,14 +29,14 @@ class SectionHeadersMetric(BaseMetric):
             found = []
             missing = []
 
-            for header in REQUIRED_SECTIONS:
+            for header in self.sections:
                 pattern = rf"^{re.escape(header)}\s*$"
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
                     found.append(header)
                 else:
                     missing.append(header)
 
-            self.score = len(found) / len(REQUIRED_SECTIONS)
+            self.score = len(found) / len(self.sections)
             self.success = self.score >= self.threshold
 
             if missing:

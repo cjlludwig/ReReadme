@@ -19,6 +19,8 @@ const config: Config = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testEnvironment: 'node',
+  testPathIgnorePatterns: ['/node_modules/', '/experiments/datasets/'],
+  modulePathIgnorePatterns: ['<rootDir>/experiments/datasets/'],
 };
 
 export default config;
