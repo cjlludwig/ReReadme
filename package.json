@@ -34,10 +34,10 @@
     "refresh": "tsx script.ts",
     "refresh:interactive": "tsx script.ts --interactive",
     "help": "tsx script.ts --help",
-    "setup": "git submodule update --init experiments/datasets/express-server experiments/datasets/rereadme && cd experiments && uv sync",
-    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py test_rereadme.py test_express_server_agents.py test_rereadme_agents.py -v",
-    "eval:rereadme": "cd experiments && NO_COLOR=1 uv run deepeval test run test_rereadme.py test_rereadme_agents.py -v",
-    "eval:agents": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server_agents.py test_rereadme_agents.py -v",
+    "setup": "git submodule update --init evals/datasets/express-server evals/datasets/rereadme && cd evals && uv sync",
+    "eval": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server.py test_rereadme.py test_express_server_agents.py test_rereadme_agents.py -v",
+    "eval:rereadme": "cd evals && NO_COLOR=1 uv run deepeval test run test_rereadme.py test_rereadme_agents.py -v",
+    "eval:agents": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server_agents.py test_rereadme_agents.py -v",
     "prepare": "husky"
   },
   "dependencies": {

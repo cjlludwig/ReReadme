@@ -30,7 +30,7 @@ npm run eval:rereadme
 Or directly:
 
 ```bash
-cd experiments
+cd evals
 uv run deepeval test run test_express_server.py -v
 uv run deepeval test run test_rereadme.py -v
 ```

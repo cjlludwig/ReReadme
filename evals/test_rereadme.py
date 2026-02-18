@@ -74,7 +74,7 @@ def test_golden_readme_similarity(generated_readme_rereadme, golden_readme_rerea
         with open(GOLDEN_PATH, "w") as f:
             f.write(generated_readme_rereadme)
         pytest.skip(
-            "Golden README created at experiments/golden/rereadme-README.md. "
+            "Golden README created at evals/golden/rereadme-README.md. "
             "Review and commit it, then re-run."
         )
 
@@ -140,7 +140,7 @@ def test_agents_golden_similarity(
         with open(AGENTS_GOLDEN_PATH, "w") as f:
             f.write(generated_agents_rereadme)
         pytest.skip(
-            "Golden AGENTS.md created at experiments/golden/rereadme-AGENTS.md. "
+            "Golden AGENTS.md created at evals/golden/rereadme-AGENTS.md. "
             "Review and commit it, then re-run."
         )
 

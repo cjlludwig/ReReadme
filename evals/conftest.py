@@ -7,7 +7,7 @@ import pytest
 
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_DIR = os.path.join(REPO_ROOT, "experiments/datasets", "express-server")
+DATASET_DIR = os.path.join(REPO_ROOT, "evals/datasets", "express-server")
 GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 GOLDEN_PATH = os.path.join(GOLDEN_DIR, "express-server-README.md")
 OUTPUT_FILENAME = "README-generated.md"
@@ -105,7 +105,7 @@ def golden_readme():
 
 # --- rereadme dataset ---
 
-REREADME_DATASET_DIR = os.path.join(REPO_ROOT, "experiments/datasets", "rereadme")
+REREADME_DATASET_DIR = os.path.join(REPO_ROOT, "evals/datasets", "rereadme")
 REREADME_GOLDEN_PATH = os.path.join(GOLDEN_DIR, "rereadme-README.md")
 
 

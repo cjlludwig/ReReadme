@@ -38,14 +38,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "make check"
+            "command": "make -C \"$CLAUDE_PROJECT_DIR\" check"
           }
         ]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "make test"}]
+        "hooks": [{"type": "command", "command": "make -C \"$CLAUDE_PROJECT_DIR\" test"}]
       }
     ]
   }
