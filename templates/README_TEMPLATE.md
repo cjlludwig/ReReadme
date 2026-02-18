@@ -44,6 +44,13 @@ Example (render only what applies):
 > - External services with default connection string (e.g. MongoDB on `localhost:27017`)
 > - Optional tooling on its own line, marked `(optional)` (e.g. Docker + VS Code Dev Containers extension)
 
+### Environment Variables
+
+> (Optional) If environment variables are required to run. Include optional vars that are common as well.
+> ```shell
+> export API_KEY=foo # Used for ...
+> ```
+
 ### Installation
 
 > Numbered steps. Each step that requires a shell command must render it in a fenced code block indented under the step, like:

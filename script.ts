@@ -15,6 +15,9 @@ $.verbose = Boolean(args.verbose)
 const OPENAI_MODEL = typeof args.model === 'string' ? args.model : 'gpt-5-nano'
 const INPUT_FILE = typeof args.input === 'string' ? args.input : 'README.md'
 const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
+const GENERATE_AGENTS = Boolean(args.agents)
+const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
+const SKIP_BACKUP = Boolean(args['no-backup'])
 
 export async function checkDependencies(): Promise<boolean> {
   echo(chalk.blue('🔍 Checking dependencies...'))
@@ -59,17 +62,19 @@ async function readFile(filePath: string): Promise<string> {
 
 export async function updateReadme(content: string): Promise<void> {
   // Backup current README if it exists
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  try {
-    if (await fs.pathExists(OUTPUT_FILE)) {
-      const ext = path.extname(OUTPUT_FILE)
-      const base = OUTPUT_FILE.slice(0, -ext.length || undefined)
-      await fs.copy(OUTPUT_FILE, `${base}.backup-${timestamp}${ext}`)
-      echo(chalk.dim(`📋 Backed up existing ${OUTPUT_FILE}`))
+  if (!SKIP_BACKUP) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    try {
+      if (await fs.pathExists(OUTPUT_FILE)) {
+        const ext = path.extname(OUTPUT_FILE)
+        const base = OUTPUT_FILE.slice(0, -ext.length || undefined)
+        await fs.copy(OUTPUT_FILE, `${base}.backup-${timestamp}${ext}`)
+        echo(chalk.dim(`📋 Backed up existing ${OUTPUT_FILE}`))
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
+      echo(chalk.yellow(`⚠️  Could not backup ${OUTPUT_FILE}: ${msg}`))
     }
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    echo(chalk.yellow(`⚠️  Could not backup ${OUTPUT_FILE}: ${msg}`))
   }
 
   // Write new README
@@ -121,20 +126,52 @@ export async function runWorkflow(): Promise<void> {
       }
     }
 
-    // Read the README template
+    // Read the README template (and optionally the AGENTS template)
     const readmeTemplate = await readFile(path.join(SCRIPT_DIR, 'templates/README_TEMPLATE.md'))
+    const agentsTemplate = GENERATE_AGENTS
+      ? await readFile(path.join(SCRIPT_DIR, 'templates/AGENTS_TEMPLATE.md'))
+      : undefined
 
     // Run agent workflow
     echo(chalk.blue('🤖 Running agent-based repo exploration...'))
-    const readmeContent = await runAgentWorkflow({
+    const { readme: readmeContent, agents: agentsContent } = await runAgentWorkflow({
       model: OPENAI_MODEL,
       inputFile: INPUT_FILE,
       readmeTemplate,
+      agentsTemplate,
       verbose: Boolean(args.verbose),
     })
 
     // Update README (with backup)
     await updateReadme(readmeContent)
+
+    // Write AGENTS.md if requested
+    if (agentsContent !== undefined) {
+      if (!SKIP_BACKUP) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        try {
+          if (await fs.pathExists(AGENTS_OUTPUT_FILE)) {
+            const ext = path.extname(AGENTS_OUTPUT_FILE)
+            const base = AGENTS_OUTPUT_FILE.slice(0, -ext.length || undefined)
+            await fs.copy(AGENTS_OUTPUT_FILE, `${base}.backup-${timestamp}${ext}`)
+            echo(chalk.dim(`📋 Backed up existing ${AGENTS_OUTPUT_FILE}`))
+          }
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : String(error)
+          echo(chalk.yellow(`⚠️  Could not backup ${AGENTS_OUTPUT_FILE}: ${msg}`))
+        }
+      }
+      await fs.writeFile(AGENTS_OUTPUT_FILE, agentsContent.trim() + '\n')
+      echo(chalk.green(`✅ ${AGENTS_OUTPUT_FILE} updated`))
+
+      echo(chalk.blue(`📐 Formatting ${AGENTS_OUTPUT_FILE} with markdownlint...`))
+      const agentsFix = await $({ nothrow: true })`markdownlint --fix ${AGENTS_OUTPUT_FILE}`
+      if (agentsFix.exitCode === 0) {
+        echo(chalk.green(`✅ ${AGENTS_OUTPUT_FILE} formatted successfully`))
+      } else {
+        echo(chalk.yellow('⚠️  Some markdown issues found in AGENTS.md (may need manual fixing)'))
+      }
+    }
 
     if (args.interactive) {
       const shouldFormat = await question('README updated. Format with markdownlint? (y/n): ')
@@ -164,13 +201,16 @@ ${chalk.yellow('Usage:')}
   rereadme [options]
 
 ${chalk.yellow('Options:')}
-  --help          Show this help message
-  --verbose       Show detailed agent output
-  --interactive   Pause between steps for review
-  --check         Only check dependencies, don't run workflow
-  --input FILE    Read current content from specified file instead of README.md
-  --output FILE   Output to specified file instead of README.md
-  --model MODEL   Override the default OpenAI model (default: gpt-5-nano)
+  --help                    Show this help message
+  --verbose                 Show detailed agent output
+  --interactive             Pause between steps for review
+  --check                   Only check dependencies, don't run workflow
+  --input FILE              Read current content from specified file instead of README.md
+  --output FILE             Output to specified file instead of README.md
+  --model MODEL             Override the default OpenAI model (default: gpt-5-nano)
+  --no-backup               Skip creating backup files before overwriting
+  --agents                  Also generate AGENTS.md (reuses Researcher output from Step 1)
+  --agents-output FILE      Output AGENTS.md to specified file (default: AGENTS.md)
 
 ${chalk.yellow('Environment Variables:')}
   OPENAI_API_KEY  Required - Your OpenAI API key

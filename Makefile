@@ -6,11 +6,11 @@ lint-ts:
 
 lint-md:
 	@echo "==> markdownlint"
-	markdownlint '**/*.md' --ignore node_modules --ignore experiments/datasets --ignore experiments/results --ignore templates
+	markdownlint '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates
 
 lint-py:
 	@echo "==> Ruff"
-	cd experiments && uv run ruff check .
+	cd evals && uv run ruff check .
 
 typecheck-ts:
 	@echo "==> tsc --noEmit"
@@ -18,7 +18,7 @@ typecheck-ts:
 
 typecheck-py:
 	@echo "==> mypy"
-	cd experiments && uv run mypy .
+	cd evals && uv run mypy .
 
 test:
 	@echo "==> npm test"
@@ -26,11 +26,14 @@ test:
 
 deps-ts:
 	@echo "==> depcheck"
-	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core" --ignore-patterns="dist,experiments"
+	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core" --ignore-patterns="dist,evals"
 
 deps-py:
 	@echo "==> deptry"
-	cd experiments && uv run deptry .
+	cd evals && uv run deptry .
+
+pre-commit: lint-py typecheck-ts typecheck-py deps-ts deps-py
+	@echo "==> All checks passed"
 
 check: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py
 	@echo "==> All checks passed"
@@ -39,7 +42,7 @@ fix:
 	@echo "==> eslint --fix"
 	npx eslint --fix || true
 	@echo "==> markdownlint --fix"
-	markdownlint --fix '**/*.md' --ignore node_modules --ignore experiments/datasets --ignore experiments/results --ignore templates || true
+	markdownlint --fix '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates || true
 	@echo "==> ruff --fix"
-	cd experiments && uv run ruff check --fix . || true
+	cd evals && uv run ruff check --fix . || true
 	@echo "==> Fixes applied"

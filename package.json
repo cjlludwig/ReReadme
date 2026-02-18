@@ -34,8 +34,10 @@
     "refresh": "tsx script.ts",
     "refresh:interactive": "tsx script.ts --interactive",
     "help": "tsx script.ts --help",
-    "setup": "git submodule update --init --recursive && cd experiments && uv sync",
-    "eval": "cd experiments && NO_COLOR=1 uv run deepeval test run test_express_server.py -v",
+    "setup": "git submodule update --init evals/datasets/express-server evals/datasets/rereadme && cd evals && uv sync",
+    "eval": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server.py test_rereadme.py test_express_server_agents.py test_rereadme_agents.py -v",
+    "eval:rereadme": "cd evals && NO_COLOR=1 uv run deepeval test run test_rereadme.py test_rereadme_agents.py -v",
+    "eval:agents": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server_agents.py test_rereadme_agents.py -v",
     "prepare": "husky"
   },
   "dependencies": {
@@ -55,10 +57,15 @@
     "eslint": "^10.0.0",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
+    "lint-staged": "^16.2.7",
     "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.0"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": "eslint --fix",
+    "*.md": "markdownlint --fix"
   }
 }

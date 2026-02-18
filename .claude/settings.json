@@ -1,19 +1,51 @@
 {
+  "permissions": {
+    "defaultMode": "plan",
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(uv sync:*)",
+      "Bash(uv mypy:*)",
+      "Bash(uv ruff:*)",
+      "Bash(which:*)",
+      "Bash(npm run eval:*)",
+      "Bash(gitingest --help:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Bash(brew list:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx depcheck:*)",
+      "Bash(make:*)"
+    ]
+  },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/save-plan.js"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "make check"
+            "command": "make -C \"$CLAUDE_PROJECT_DIR\" check"
           }
         ]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "make test"}]
+        "hooks": [{"type": "command", "command": "make -C \"$CLAUDE_PROJECT_DIR\" test"}]
       }
     ]
   }
