@@ -13,7 +13,8 @@
 
 ## Commands
 
-> Only commands an agent will actually need to run. One fenced shell block, each line commented.
+> Only commands an agent will actually need to run. One fenced shell block, each line commented. Emphasive quality and validation checks like linters, tests, etc.
+
 ```shell
 npm install       # install dependencies
 npm run start     # start the application
@@ -50,3 +51,7 @@ npm run lint      # lint — must pass before committing
 - **Run**: `npm run test`
 - **Location**: `tests/` mirroring `src/` structure
 - **Pattern**: `*.test.ts`
+
+<!-- REMINDERS
+- Remove any hints from final output. Ex: `>` or `<!--` blocks
+-->
