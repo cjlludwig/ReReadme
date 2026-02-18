@@ -57,10 +57,15 @@
     "eslint": "^10.0.0",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
+    "lint-staged": "^16.2.7",
     "tsx": "^4.21.0",
     "typescript-eslint": "^8.56.0"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": "eslint --fix",
+    "*.md": "markdownlint --fix"
   }
 }
