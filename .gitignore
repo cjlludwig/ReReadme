@@ -141,12 +141,12 @@ gitingest*.txt
 *backup-*
 script.js
 
-# Experiments
-experiments/__pycache__/
-experiments/.pytest_cache/
-experiments/.deepeval_cache/
-experiments/.venv/
-experiments/datasets/express-server/README-generated.md
-experiments/results/
+# Experiments + Evals
+evals/__pycache__/
+evals/.pytest_cache/
+evals/.deepeval_cache/
+evals/.venv/
+evals/datasets/express-server/README-generated.md
+evals/results/
 .deepeval*
 **/__pycache__/**
