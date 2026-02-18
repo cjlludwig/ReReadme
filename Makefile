@@ -32,6 +32,9 @@ deps-py:
 	@echo "==> deptry"
 	cd evals && uv run deptry .
 
+pre-commit: lint-py typecheck-ts typecheck-py deps-ts deps-py
+	@echo "==> All checks passed"
+
 check: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py
 	@echo "==> All checks passed"
 
