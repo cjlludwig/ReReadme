@@ -2,8 +2,9 @@ import { Agent } from '@openai/agents';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { listDirectory, readFile, searchCode, getStructure } from './tools.js';
 
-export function createAgents(model: string, readmeTemplate: string) {
+export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
   // 2-agent pipeline: Researcher → TemplateEnforcer (with DetailFetcher handoff)
+  // Optional Step 3: AgentsDocWriter when agentsTemplate is provided
 
   const detailFetcher = new Agent({
     name: 'DetailFetcher',
@@ -13,7 +14,7 @@ export function createAgents(model: string, readmeTemplate: string) {
 Rules:
 - Use the tools to find the answer — do not guess or fabricate
 - Return a concise, factual answer — no preamble or commentary
-- Once you have the answer, hand off back to TemplateEnforcer with your findings`,
+- Once you have the answer, hand off back to whichever agent called you with your findings`,
     tools: [listDirectory, readFile, searchCode, getStructure],
     handoffDescription:
       'Fetch a specific missing fact from the repository (e.g. a port number, an env var name, a dependency version)',
@@ -44,8 +45,34 @@ Additional rules:
       'Write the final README using accumulated context',
   });
 
-  // Wire the return handoff: DetailFetcher → TemplateEnforcer
-  detailFetcher.handoffs = [templateEnforcer];
+  // Optional Step 3: AgentsDocWriter (only when agentsTemplate is provided)
+  const agentsDocWriter = agentsTemplate
+    ? new Agent({
+        name: 'AgentsDocWriter',
+        model,
+        instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a technical writer specializing in AGENTS.md documentation. Using the research summary provided in the conversation, generate a complete AGENTS.md file.
+
+The template below is your single source of truth for structure, headers, and content guidance. Follow every instruction in it exactly.
+
+AGENTS.md Template:
+${agentsTemplate}
+
+Additional rules:
+- Target < 100 lines in final output — every line must earn its place
+- Only include information that was discovered by the Researcher — do not fabricate content
+- Omit any section where nothing concrete was found
+- If a required section is missing specific facts, hand off to DetailFetcher to retrieve it. Limit yourself to 3 handoffs.
+- Your entire output must be ONLY the raw AGENTS.md markdown — no preamble, no closing commentary, no wrapping code fences`,
+        tools: [readFile],
+        handoffs: [detailFetcher],
+        handoffDescription: 'Write the AGENTS.md using accumulated context',
+      })
+    : undefined;
+
+  // Wire the return handoff: DetailFetcher → TemplateEnforcer (and AgentsDocWriter if present)
+  detailFetcher.handoffs = agentsDocWriter
+    ? [templateEnforcer, agentsDocWriter]
+    : [templateEnforcer];
 
   const researcher = new Agent({
     name: 'Researcher',
@@ -79,5 +106,5 @@ When done, output your findings as a structured technical summary using the exac
       'Explore repository structure and analyze file contents',
   });
 
-  return { researcher, templateEnforcer, detailFetcher };
+  return { researcher, templateEnforcer, detailFetcher, agentsDocWriter };
 }

@@ -1,0 +1,30 @@
+name: Validate Install & CLI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  install-and-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - run: npm install -g markdownlint-cli
+
+      - run: npm link
+
+      - name: Validate rereadme --help
+        run: rereadme --help
+
+      - name: Validate rereadme --check
+        run: rereadme --check
+        env:
+          OPENAI_API_KEY: foo
+          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
