@@ -2,6 +2,7 @@
 
 ![Node version](https://img.shields.io/badge/node-%3E%3D22-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+![CI](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
 
 The rereadme CLI tool automatically refreshes README.md files by analyzing the repository, processing findings with AI prompts, and (optionally) integrating external sources. It is built around a two-agent workflow powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
 
