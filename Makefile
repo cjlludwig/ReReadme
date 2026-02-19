@@ -6,7 +6,7 @@ lint-ts:
 
 lint-md:
 	@echo "==> markdownlint"
-	markdownlint '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates
+	npx markdownlint '**/*.md'
 
 lint-py:
 	@echo "==> Ruff"
@@ -26,7 +26,7 @@ test:
 
 deps-ts:
 	@echo "==> depcheck"
-	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core" --ignore-patterns="dist,evals"
+	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core,markdownlint-cli" --ignore-patterns="dist,evals"
 
 deps-py:
 	@echo "==> deptry"
@@ -42,7 +42,7 @@ fix:
 	@echo "==> eslint --fix"
 	npx eslint --fix || true
 	@echo "==> markdownlint --fix"
-	markdownlint --fix '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates || true
+	npx markdownlint --fix '**/*.md' || true
 	@echo "==> ruff --fix"
 	cd evals && uv run ruff check --fix . || true
 	@echo "==> Fixes applied"

@@ -30,11 +30,11 @@ export async function checkDependencies(): Promise<boolean> {
     if (markdownlintResult.exitCode === 0) {
       echo(chalk.green('✅ markdownlint-cli found'))
     } else {
-      echo(chalk.red('❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli OR brew install markdownlint-cli'))
+      echo(chalk.red('❌ markdownlint-cli not found. Run: npm install'))
       allGood = false
     }
   } catch {
-    echo(chalk.red('❌ markdownlint-cli not found. Install with: npm install -g markdownlint-cli OR brew install markdownlint-cli'))
+    echo(chalk.red('❌ markdownlint-cli not found. Run: npm install'))
     allGood = false
   }
 

@@ -17,7 +17,11 @@
       "Bash(brew list:*)",
       "Bash(npx eslint:*)",
       "Bash(npx depcheck:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(git -C * status)",
+      "Bash(git -C * log main...HEAD --oneline)",
+      "Bash(git -C * diff main...HEAD --stat)",
+      "Bash(gh pr create:*)"
     ]
   },
   "hooks": {
