@@ -21,18 +21,19 @@ class SectionContentMetric(BaseMetric):
     def measure(self, test_case: LLMTestCase) -> float:
         try:
             assert test_case.actual_output is not None
+            sections = (test_case.additional_metadata or {}).get("sections") or self.sections
             content = test_case.actual_output
             sections_with_content = []
             empty_sections = []
 
-            for section in self.sections:
+            for section in sections:
                 section_content = self._extract_section_content(content, section)
                 if section_content and len(section_content.strip()) >= MIN_CONTENT_LENGTH:
                     sections_with_content.append(section)
                 else:
                     empty_sections.append(section)
 
-            self.score = len(sections_with_content) / len(self.sections)
+            self.score = len(sections_with_content) / len(sections)
             self.success = self.score >= self.threshold
 
             if empty_sections:

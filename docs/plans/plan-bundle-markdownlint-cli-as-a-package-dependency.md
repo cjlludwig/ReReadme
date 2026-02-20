@@ -57,18 +57,17 @@ Replace bare `markdownlint` calls with `npx markdownlint` (consistent with how t
 
 ```makefile
 lint-md:
-    @echo "==> markdownlint"
-    npx markdownlint '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates
+	@echo "==> markdownlint"
+	npx markdownlint '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates
 
 # In fix target:
-    @echo "==> markdownlint --fix"
-    npx markdownlint --fix '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates || true
+	@echo "==> markdownlint --fix"
+	npx markdownlint --fix '**/*.md' --ignore node_modules --ignore evals/datasets --ignore evals/results --ignore templates || true
 ```
 
 ### 4. `.github/workflows/ci.yml` — Remove global install step
 
 Delete the line:
-
 ```yaml
 - run: npm install -g markdownlint-cli
 ```

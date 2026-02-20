@@ -5,35 +5,23 @@ from deepeval import assert_test  # type: ignore[attr-defined]
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from metrics import SectionHeadersMetric, SectionContentMetric, KeywordsMetric
+from metrics import (
+    SectionHeadersMetric,
+    SectionContentMetric,
+    KeywordsMetric,
+    REREADME_README_KEYWORDS,
+    REREADME_AGENTS_KEYWORDS,
+    AGENTS_SECTIONS,
+    README_GEVAL_CRITERIA,
+    AGENTS_GEVAL_CRITERIA,
+    GEVAL_THRESHOLD,
+    GEVAL_MODEL,
+)
 
 
 GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 GOLDEN_PATH = os.path.join(GOLDEN_DIR, "rereadme-README.md")
 AGENTS_GOLDEN_PATH = os.path.join(GOLDEN_DIR, "rereadme-AGENTS.md")
-
-# AGENTS.md must always have Project and Commands; other sections are optional per template rules
-AGENTS_REQUIRED_SECTIONS = ["## Project", "## Commands"]
-
-AGENTS_KEYWORDS = [
-    "npm run dev",
-    "npm test",
-    "OPENAI_API_KEY",
-    "TypeScript",
-    "script.ts",
-]
-
-REREADME_KEYWORDS = [
-    "npm install",
-    "npm run dev",
-    "OPENAI_API_KEY",
-    "TypeScript",
-    "OpenAI Agents SDK",
-    "markdownlint",
-    "git clone https://github.com/connorludwig/rereadme.git",
-    "rereadme",
-    "rereadme --check"
-]
 
 
 def test_section_headers(generated_readme_rereadme):
@@ -58,7 +46,7 @@ def test_section_content(generated_readme_rereadme):
 
 def test_keywords(generated_readme_rereadme):
     """README must include rereadme-specific keywords."""
-    metric = KeywordsMetric(threshold=1.0, keywords=REREADME_KEYWORDS)
+    metric = KeywordsMetric(threshold=1.0, keywords=REREADME_README_KEYWORDS)
     test_case = LLMTestCase(
         input="Generate a README for rereadme",
         actual_output=generated_readme_rereadme,
@@ -80,17 +68,13 @@ def test_golden_readme_similarity(generated_readme_rereadme, golden_readme_rerea
 
     metric = GEval(
         name="README Similarity",
-        criteria=(
-            "Evaluate semantic similarity between the generated README and the golden README. "
-            "Consider section structure alignment, technical accuracy of descriptions, "
-            "and content completeness. Minor wording and structure differences should be tolerated."
-        ),
+        criteria=README_GEVAL_CRITERIA,
         evaluation_params=[
             LLMTestCaseParams.ACTUAL_OUTPUT,
             LLMTestCaseParams.EXPECTED_OUTPUT,
         ],
-        threshold=0.70,
-        model="gpt-5-mini",
+        threshold=GEVAL_THRESHOLD,
+        model=GEVAL_MODEL,
     )
 
     test_case = LLMTestCase(
@@ -103,7 +87,7 @@ def test_golden_readme_similarity(generated_readme_rereadme, golden_readme_rerea
 
 def test_agents_section_headers(generated_agents_rereadme: str) -> None:
     """AGENTS.md must contain the core required section headers."""
-    metric = SectionHeadersMetric(threshold=1.0, sections=AGENTS_REQUIRED_SECTIONS)
+    metric = SectionHeadersMetric(threshold=1.0, sections=AGENTS_SECTIONS)
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for rereadme",
         actual_output=generated_agents_rereadme,
@@ -113,7 +97,7 @@ def test_agents_section_headers(generated_agents_rereadme: str) -> None:
 
 def test_agents_section_content(generated_agents_rereadme: str) -> None:
     """Core AGENTS.md sections must have meaningful content (>= 20 chars)."""
-    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_REQUIRED_SECTIONS)
+    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_SECTIONS)
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for rereadme",
         actual_output=generated_agents_rereadme,
@@ -123,7 +107,7 @@ def test_agents_section_content(generated_agents_rereadme: str) -> None:
 
 def test_agents_keywords(generated_agents_rereadme: str) -> None:
     """AGENTS.md must include key facts an agent needs to work in the repo."""
-    metric = KeywordsMetric(threshold=1.0, keywords=AGENTS_KEYWORDS)
+    metric = KeywordsMetric(threshold=1.0, keywords=REREADME_AGENTS_KEYWORDS)
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for rereadme",
         actual_output=generated_agents_rereadme,
@@ -146,18 +130,13 @@ def test_agents_golden_similarity(
 
     metric = GEval(
         name="AGENTS.md Similarity",
-        criteria=(
-            "Evaluate semantic similarity between the generated AGENTS.md and the golden AGENTS.md. "
-            "Focus on: presence of required sections (Project, Commands), accuracy of commands, "
-            "correctness of file structure, and appropriate constraints. "
-            "Minor wording differences should be tolerated."
-        ),
+        criteria=AGENTS_GEVAL_CRITERIA,
         evaluation_params=[
             LLMTestCaseParams.ACTUAL_OUTPUT,
             LLMTestCaseParams.EXPECTED_OUTPUT,
         ],
-        threshold=0.70,
-        model="gpt-5-mini",
+        threshold=GEVAL_THRESHOLD,
+        model=GEVAL_MODEL,
     )
 
     test_case = LLMTestCase(

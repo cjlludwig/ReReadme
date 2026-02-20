@@ -1,8 +1,7 @@
 from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
-
-REQUIRED_KEYWORDS = ["npm install", "npm start", "http://localhost:9000", "Node.js", "Express.js", "MongoDB"]
+from .types import EXPRESS_README_KEYWORDS
 
 
 class KeywordsMetric(BaseMetric):
@@ -10,7 +9,7 @@ class KeywordsMetric(BaseMetric):
 
     def __init__(self, threshold: float = 1.0, keywords: list[str] | None = None):
         self.threshold = threshold
-        self.keywords = keywords if keywords is not None else REQUIRED_KEYWORDS
+        self.keywords = keywords if keywords is not None else EXPRESS_README_KEYWORDS
         self.score = 0.0
         self.success = False
         self.reason = ""
@@ -19,17 +18,18 @@ class KeywordsMetric(BaseMetric):
     def measure(self, test_case: LLMTestCase) -> float:
         try:
             assert test_case.actual_output is not None
+            keywords = (test_case.additional_metadata or {}).get("keywords") or self.keywords
             content = test_case.actual_output.lower()
             found = []
             missing = []
 
-            for cmd in self.keywords:
+            for cmd in keywords:
                 if cmd.lower() in content:
                     found.append(cmd)
                 else:
                     missing.append(cmd)
 
-            self.score = len(found) / len(self.keywords)
+            self.score = len(found) / len(keywords)
             self.success = self.score >= self.threshold
 
             if missing:

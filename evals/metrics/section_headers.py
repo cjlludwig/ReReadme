@@ -25,18 +25,19 @@ class SectionHeadersMetric(BaseMetric):
     def measure(self, test_case: LLMTestCase) -> float:
         try:
             assert test_case.actual_output is not None
+            sections = (test_case.additional_metadata or {}).get("sections") or self.sections
             content = test_case.actual_output
             found = []
             missing = []
 
-            for header in self.sections:
+            for header in sections:
                 pattern = rf"^{re.escape(header)}\s*$"
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
                     found.append(header)
                 else:
                     missing.append(header)
 
-            self.score = len(found) / len(self.sections)
+            self.score = len(found) / len(sections)
             self.success = self.score >= self.threshold
 
             if missing:
