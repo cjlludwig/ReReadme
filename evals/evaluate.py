@@ -227,7 +227,7 @@ def main() -> None:
 
     # Phase 3: Single evaluate() call with all 4 test cases
     test_cases = [tc for _, tc, _ in prepared]
-    result = evaluate(
+    evaluate(
         test_cases=test_cases,
         metrics=SHARED_METRICS,
         display_config=DisplayConfig(print_results=True, file_output_dir='results'),
