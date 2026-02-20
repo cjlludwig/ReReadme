@@ -13,6 +13,14 @@ const config: Config = {
         type: 'es6',
       },
     }],
+    '^.+\\.mjs$': ['@swc/jest', {
+      jsc: {
+        target: 'es2022',
+      },
+      module: {
+        type: 'es6',
+      },
+    }],
   },
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
@@ -21,6 +29,7 @@ const config: Config = {
   testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/evals/datasets/'],
   modulePathIgnorePatterns: ['<rootDir>/evals/datasets/'],
+  transformIgnorePatterns: ['/node_modules/(?!(@clack)/)'],
 };
 
 export default config;

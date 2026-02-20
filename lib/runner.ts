@@ -1,6 +1,7 @@
 import { run, withTrace } from '@openai/agents';
 import { createAgents } from './agents.js';
 import * as fs from 'node:fs';
+import * as log from './logger.js';
 
 export interface AgentWorkflowOptions {
   model: string;
@@ -28,7 +29,7 @@ function stripFences(s: string): string {
 export async function runAgentWorkflow(
   options: AgentWorkflowOptions,
 ): Promise<{ readme: string; agents?: string }> {
-  const { model, inputFile, readmeTemplate, agentsTemplate, verbose } = options;
+  const { model, inputFile, readmeTemplate, agentsTemplate } = options;
 
   const { researcher, templateEnforcer, agentsDocWriter } = createAgents(model, readmeTemplate, agentsTemplate);
 
@@ -48,41 +49,29 @@ export async function runAgentWorkflow(
   // Deterministic sequential pipeline: Researcher → TemplateEnforcer → (AgentsDocWriter?)
   const { readme, agents } = await withTrace('ReReadme Agent Workflow', async () => {
     // Step 1: Researcher explores repo structure and analyzes file contents
-    if (verbose) {
-      console.log(`[agent] Step 1/${totalSteps}: Researcher (model: ${model})`);
-    }
+    log.verboseStep(`Step 1/${totalSteps}: Researcher (model: ${model})`);
     const step1 = await run(researcher, initialPrompt, { maxTurns: 70 });
     if (!step1.finalOutput || step1.finalOutput.trim().length === 0) {
       throw new Error('Researcher produced no output');
     }
-    if (verbose) {
-      console.log(`[agent] Researcher done (${step1.finalOutput.length} chars)`);
-    }
+    log.verboseStep(`Researcher done (${step1.finalOutput.length} chars)`);
 
     // Step 2: TemplateEnforcer generates the final README (may hand off to DetailFetcher)
-    if (verbose) {
-      console.log(`[agent] Step 2/${totalSteps}: TemplateEnforcer`);
-    }
+    log.verboseStep(`Step 2/${totalSteps}: TemplateEnforcer`);
     const step2 = await run(templateEnforcer, step1.finalOutput, { maxTurns: 20 });
     if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
       throw new Error('TemplateEnforcer produced no output');
     }
-    if (verbose) {
-      console.log(`[agent] TemplateEnforcer done (${step2.finalOutput.length} chars)`);
-    }
+    log.verboseStep(`TemplateEnforcer done (${step2.finalOutput.length} chars)`);
 
     // Step 3 (optional): AgentsDocWriter generates AGENTS.md from the same Researcher output
     if (agentsDocWriter) {
-      if (verbose) {
-        console.log(`[agent] Step 3/${totalSteps}: AgentsDocWriter`);
-      }
+      log.verboseStep(`Step 3/${totalSteps}: AgentsDocWriter`);
       const step3 = await run(agentsDocWriter, step1.finalOutput, { maxTurns: 20 });
       if (!step3.finalOutput || step3.finalOutput.trim().length === 0) {
         throw new Error('AgentsDocWriter produced no output');
       }
-      if (verbose) {
-        console.log(`[agent] AgentsDocWriter done (${step3.finalOutput.length} chars)`);
-      }
+      log.verboseStep(`AgentsDocWriter done (${step3.finalOutput.length} chars)`);
       return { readme: step2.finalOutput, agents: step3.finalOutput };
     }
 

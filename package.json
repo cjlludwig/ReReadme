@@ -42,8 +42,10 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@clack/prompts": "1.0.1",
     "@openai/agents": "0.4.10",
     "markdownlint-cli": "0.47.0",
+    "picocolors": "1.1.1",
     "typescript": "5.9.3",
     "zod": "4.3.6",
     "zx": "8.8.5"
