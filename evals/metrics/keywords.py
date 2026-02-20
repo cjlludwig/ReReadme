@@ -18,17 +18,18 @@ class KeywordsMetric(BaseMetric):
     def measure(self, test_case: LLMTestCase) -> float:
         try:
             assert test_case.actual_output is not None
+            keywords = (test_case.additional_metadata or {}).get("keywords") or self.keywords
             content = test_case.actual_output.lower()
             found = []
             missing = []
 
-            for cmd in self.keywords:
+            for cmd in keywords:
                 if cmd.lower() in content:
                     found.append(cmd)
                 else:
                     missing.append(cmd)
 
-            self.score = len(found) / len(self.keywords)
+            self.score = len(found) / len(keywords)
             self.success = self.score >= self.threshold
 
             if missing:

@@ -8,6 +8,10 @@ The rereadme CLI tool automatically refreshes README.md files by analyzing the r
 
 ## Description
 
+> [!WARNING] If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
+> This tool allows OpenAI Agents to inspect relevant files within a repo to determine repo details.
+> Check compliance policies before usage.
+
 The rereadme tool automates the process of keeping README files current by:
 
 1. **Analyzing your codebase** - Uses FileAgent to extract project structure and code context
