@@ -2,6 +2,8 @@ name: Validate Install & CLI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
