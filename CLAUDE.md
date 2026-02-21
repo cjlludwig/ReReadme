@@ -52,7 +52,7 @@ The core workflow in `script.ts` orchestrated by `runWorkflow()`:
 - **Filesystem tools** (`lib/tools.ts`): `list_directory`, `read_file`, `search_code`, `get_structure` — all validate paths within `process.cwd()` to prevent traversal
 - **Shell via zx**: Shell commands (markdownlint) use Google's `zx` library with `nothrow` for graceful failures
 - **Safe file ops**: Timestamped backups (`README.md.backup-<ISO>`) before any overwrite
-- **CLI args**: Parsed via `zx.argv` — flags include `--help`, `--verbose`, `--interactive`, `--check`, `--input`, `--output`, `--model`, `--no-backup`, `--agents`, `--agents-output`
+- **CLI args**: Parsed via `zx.argv` — flags include `--help`, `--verbose`, `--interactive`, `--check`, `--output`, `--model`, `--no-backup`, `--agents`, `--agents-output`, `--template FILE`, `--agents-template FILE`
 
 ### File Layout
 
