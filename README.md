@@ -2,22 +2,16 @@
 
 ![Node version](https://img.shields.io/badge/node-%3E%3D22-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
-![CI](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
-
-The rereadme CLI tool automatically refreshes README.md files by analyzing the repository, processing findings with AI prompts, and (optionally) integrating external sources. It is built around a two-agent workflow powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
+![Build](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
 
 ## Description
 
-> [!WARNING] If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
+> [!WARNING]
+> If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
 > This tool allows OpenAI Agents to inspect relevant files within a repo to determine repo details.
 > Check compliance policies before usage.
 
-The rereadme tool automates the process of keeping README files current by:
-
-1. **Analyzing your codebase** - Uses FileAgent to extract project structure and code context
-2. **Processing with AI** - Leverages OpenAI's API to understand and improve documentation
-3. **Integrating external sources** - Can pull in context from Confluence and other documentation sources
-4. **Maintaining consistency** - Applies standardized formatting and structure
+The rereadme CLI tool automatically refreshes README.md files by analyzing the repository and processing findings with AI. It uses a multi-agent architecture (Researcher → DetailFetcher → TemplateEnforcer) powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
 
 ## Getting Started
 
@@ -30,10 +24,6 @@ The rereadme tool automates the process of keeping README files current by:
 **Environment Variables:**
 
 - `OPENAI_API_KEY` - Your OpenAI API key for processing README content
-
-**Optional Setup:**
-
-- Confluence MCP integration for external documentation sources
 
 **Troubleshooting Dependencies:**
 
@@ -81,14 +71,18 @@ rereadme --verbose
 # Run with interactive mode (pause between steps)
 rereadme --interactive
 
-# Include Confluence MCP server step for external sources
-rereadme --confluence
+# Specify input/output files
+rereadme --input README.md --output README-new.md
 
-# Continue processing even if some steps fail
-rereadme --continue
+# Override the AI model
+rereadme --model gpt-4o
 
-# Keep gitingest context files after completion
-rereadme --keep-context
+# Skip backup creation
+rereadme --no-backup
+
+# Generate agents documentation
+rereadme --agents
+rereadme --agents --agents-output AGENTS.md
 
 # Check dependencies only
 rereadme --check
@@ -104,7 +98,6 @@ rereadme --help
 npm run dev                        # Run basic workflow
 npm run dev -- --verbose          # Show detailed output
 npm run dev -- --interactive      # Run with manual step approval
-npm run dev -- --confluence       # Include Confluence MCP server step
 npm run dev -- --check            # Check dependencies only
 npm run help                       # Show help
 ```
@@ -115,19 +108,19 @@ The tool executes an automated workflow comprised of:
 
 1) Dependency Check
    - Verifies required tools are installed (markdownlint-cli, OpenAI API key)
-2) Context Generation
-   - Uses the repository tools to analyze the codebase and gather context
-3) AI Processing
-   - The AI prompts standardize the existing README, integrate external sources (if enabled), and update content based on current code analysis
+2) Agent Workflow
+   - Researcher explores the repo structure and gathers context via filesystem tools
+   - DetailFetcher handles follow-up queries for missing facts (handoff from Researcher)
+   - TemplateEnforcer generates the final README from the template using gathered context
+3) README Update
+   - Writes the generated README with a timestamped backup of the original
 4) Formatting
-   - Applies consistent Markdown formatting to the resulting README
-5) Cleanup
-   - Removes temporary/context files unless explicitly requested to keep them
+   - Applies consistent Markdown formatting via markdownlint --fix
 
 Additional implementation details:
 
 - The workflow is implemented in script.ts and orchestrates the agent workflow via runAgentWorkflow in lib/runner.js
-- The AI-driven generation uses the OpenAI Agents SDK with a two-agent pipeline: Researcher and TemplateEnforcer, plus a DetailFetcher handoff for missing facts
+- The AI-driven generation uses a multi-agent architecture: Researcher → DetailFetcher → TemplateEnforcer, plus an optional AgentsDocWriter (when `--agents` is used)
 
 ## Architecture
 
@@ -137,25 +130,6 @@ The tool is built using:
 - **OpenAI Agents SDK** - AI processing of documentation content
 - **TypeScript** - Type-safe development with modern JavaScript features
 
-### Project Structure
-
-```text
-rereadme/
-├── bin/
-│   └── rereadme.js          # CLI wrapper for running the TypeScript script
-├── lib/
-│   ├── agents.ts              # Agent definitions (Researcher, TemplateEnforcer, DetailFetcher)
-│   ├── runner.ts              # runAgentWorkflow() entry point
-│   └── tools.ts               # Filesystem tools for agents
-├── templates/                 # Output templates
-│   ├── AGENTS_TEMPLATE.md
-│   └── README_TEMPLATE.md
-├── docs/                      # Documentation (e.g., project-spec.md)
-├── script.ts                    # Main CLI application
-├── package.json               # Dependencies and scripts
-├── tsconfig.json
-```
-
 ## Help
 
 **Common Issues:**
@@ -163,8 +137,6 @@ rereadme/
 - **Missing dependencies**: Run `rereadme --check` to identify missing tools
 - **OpenAI API errors**: Ensure `OPENAI_API_KEY` is set and has sufficient credits
 - **Permission errors**: Ensure you have write access to the README.md file
-- **Large repositories**: Gitingest has size limits; adjust include/exclude patterns if needed
-
 **Tips:**
 
 - Use `--interactive` mode to review changes at each step
@@ -176,7 +148,6 @@ rereadme/
 
 - [Google ZX Documentation](https://google.github.io/zx/)
 - [OpenAI API Documentation](https://platform.openai.com/docs)
-- [Gitingest Documentation](https://github.com/cyclotruc/gitingest)
 - [Markdownlint CLI](https://github.com/igorshubovych/markdownlint-cli)
 
 ## License
