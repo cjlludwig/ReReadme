@@ -38,11 +38,11 @@ npm link                           # Makes 'rereadme' available as CLI command
 The core workflow in `script.ts` orchestrated by `runWorkflow()`:
 
 1. **Dependency Check** — Verifies markdownlint-cli and OPENAI_API_KEY
-2. **Agent Workflow** — `runAgentWorkflow()` launches an orchestrator that routes between specialist agents:
-   - **FileExplorer** — Navigates the repo structure, identifies key files (package.json, entry points, configs, tests)
-   - **ContentAnalyzer** — Reads discovered files, extracts purpose, dependencies, architecture, commands
-   - **READMEWriter** — Generates README following the template, using only discovered information
-   - **Orchestrator** — Routes between the above agents via handoffs
+2. **Agent Workflow** — `runAgentWorkflow()` runs the multi-agent pipeline:
+   - **Researcher** — Entry point; navigates repo structure, identifies key files, gathers context
+   - **DetailFetcher** — Handles follow-up queries for missing facts (handoff from Researcher)
+   - **TemplateEnforcer** — Generates the final README from the template using gathered context
+   - **AgentsDocWriter** — Optional; generates agents documentation when `--agents` flag is used
 3. **README Update** — Writes output with timestamped backup
 4. **Formatting** — `markdownlint --fix` auto-correction
 
@@ -52,7 +52,7 @@ The core workflow in `script.ts` orchestrated by `runWorkflow()`:
 - **Filesystem tools** (`lib/tools.ts`): `list_directory`, `read_file`, `search_code`, `get_structure` — all validate paths within `process.cwd()` to prevent traversal
 - **Shell via zx**: Shell commands (markdownlint) use Google's `zx` library with `nothrow` for graceful failures
 - **Safe file ops**: Timestamped backups (`README.md.backup-<ISO>`) before any overwrite
-- **CLI args**: Parsed via `zx.argv` — flags include `--help`, `--verbose`, `--interactive`, `--check`, `--input`, `--output`, `--model`
+- **CLI args**: Parsed via `zx.argv` — flags include `--help`, `--verbose`, `--interactive`, `--check`, `--input`, `--output`, `--model`, `--no-backup`, `--agents`, `--agents-output`
 
 ### File Layout
 
@@ -60,7 +60,7 @@ The core workflow in `script.ts` orchestrated by `runWorkflow()`:
 - `script.ts` — CLI orchestration, dependency checks, file I/O
 - `script.spec.ts` — Jest test suite (tools, agents, runner)
 - `lib/tools.ts` — Filesystem tools for agents (list_directory, read_file, search_code, get_structure)
-- `lib/agents.ts` — Agent definitions (FileExplorer, ContentAnalyzer, READMEWriter, Orchestrator)
+- `lib/agents.ts` — Agent definitions (Researcher, DetailFetcher, TemplateEnforcer, AgentsDocWriter)
 - `lib/runner.ts` — `runAgentWorkflow()` entry point
 - `templates/` — README output template
 
