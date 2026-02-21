@@ -4,19 +4,14 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Build](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
 
-The rereadme CLI tool automatically refreshes README.md files by analyzing the repository and processing findings with AI. It uses a multi-agent architecture (Researcher → DetailFetcher → TemplateEnforcer) powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
-
 ## Description
 
-> [!WARNING] If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
+> [!WARNING]
+> If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
 > This tool allows OpenAI Agents to inspect relevant files within a repo to determine repo details.
 > Check compliance policies before usage.
 
-The rereadme tool automates the process of keeping README files current by:
-
-1. **Analyzing your codebase** - Uses specialist agents to explore project structure and extract technical details
-2. **Processing with AI** - Leverages OpenAI's Agents SDK to understand and improve documentation
-3. **Maintaining consistency** - Applies standardized formatting and structure
+The rereadme CLI tool automatically refreshes README.md files by analyzing the repository and processing findings with AI. It uses a multi-agent architecture (Researcher → DetailFetcher → TemplateEnforcer) powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
 
 ## Getting Started
 
