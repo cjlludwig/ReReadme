@@ -71,8 +71,8 @@ rereadme --verbose
 # Run with interactive mode (pause between steps)
 rereadme --interactive
 
-# Specify input/output files
-rereadme --input README.md --output README-new.md
+# Specify output file
+rereadme --output README-new.md
 
 # Override the AI model
 rereadme --model gpt-4o
@@ -83,6 +83,10 @@ rereadme --no-backup
 # Generate agents documentation
 rereadme --agents
 rereadme --agents --agents-output AGENTS.md
+
+# Use custom templates
+rereadme --template MY_TEMPLATE.md
+rereadme --agents --agents-template MY_AGENTS_TEMPLATE.md
 
 # Check dependencies only
 rereadme --check
@@ -101,6 +105,16 @@ npm run dev -- --interactive      # Run with manual step approval
 npm run dev -- --check            # Check dependencies only
 npm run help                       # Show help
 ```
+
+### Custom Templates
+
+You can supply your own markdown template with `--template FILE` (for README) or `--agents-template FILE` (for AGENTS.md, requires `--agents`).
+
+Template requirements:
+
+- Must be a valid markdown file with at least one heading (`#`)
+- Use `>` blockquote lines as content placeholders (matches agent behavior)
+- Maximum size: 50KB
 
 ### Workflow Steps
 
