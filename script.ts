@@ -91,7 +91,7 @@ export async function runCiWorkflow(): Promise<void> {
     try {
       result = await runDiffWorkflow({
         model: OPENAI_MODEL,
-        inputFile: INPUT_FILE,
+        inputFile: 'README.md',
         baseRef: BASE_REF,
         headRef: HEAD_REF,
         verbose: Boolean(args.verbose),
@@ -318,7 +318,6 @@ ${pc.yellow('Examples:')}
   rereadme --check                            # Check dependencies only
   rereadme --model gpt-4o                     # Use a different OpenAI model
   rereadme --output README-v2.md              # Output to custom filename
-  rereadme --input some_doc.md --output test_doc.md  # Read from one file, write to another
   rereadme --output README-v2.md     # Output to custom filename
   rereadme --template MY_TEMPLATE.md                # Use a custom README template
   rereadme --ci                               # CI mode: analyze diff against main
