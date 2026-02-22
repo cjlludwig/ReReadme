@@ -4,6 +4,7 @@
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
 import { runAgentWorkflow, runDiffWorkflow } from './lib/runner.js'
+import { validateTemplate } from './lib/validate.js'
 import * as log from './lib/logger.js'
 import pc from 'picocolors'
 
@@ -16,7 +17,6 @@ const args = argv as Record<string, unknown>
 $.verbose = Boolean(args.verbose)
 log.setVerbose(Boolean(args.verbose))
 const OPENAI_MODEL = typeof args.model === 'string' ? args.model : 'gpt-5-nano'
-const INPUT_FILE = typeof args.input === 'string' ? args.input : 'README.md'
 const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
 const GENERATE_AGENTS = Boolean(args.agents)
 const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
@@ -25,6 +25,8 @@ const CI_MODE = Boolean(args.ci)
 const BASE_REF = typeof args['base-ref'] === 'string' ? args['base-ref'] : 'main'
 const HEAD_REF = typeof args['head-ref'] === 'string' ? args['head-ref'] : 'HEAD'
 const CI_OUTPUT = typeof args['ci-output'] === 'string' ? args['ci-output'] : 'README-suggestions.md'
+const CUSTOM_README_TEMPLATE = typeof args.template === 'string' ? args.template : undefined
+const CUSTOM_AGENTS_TEMPLATE = typeof args['agents-template'] === 'string' ? args['agents-template'] : undefined
 
 export async function checkDependencies(): Promise<boolean> {
   const errors: string[] = []
@@ -175,7 +177,6 @@ export async function runWorkflow(): Promise<void> {
     log.intro('rereadme')
 
     // Secondary metadata — verbose only
-    if (INPUT_FILE !== 'README.md')  { log.detail(`Input: ${INPUT_FILE}`) }
     if (OUTPUT_FILE !== 'README.md') { log.detail(`Output: ${OUTPUT_FILE}`) }
     if (OPENAI_MODEL !== 'gpt-5-nano') { log.detail(`Model: ${OPENAI_MODEL}`) }
 
@@ -191,9 +192,18 @@ export async function runWorkflow(): Promise<void> {
       }
     }
 
-    const readmeTemplate = await readFile(path.join(SCRIPT_DIR, 'templates/README_TEMPLATE.md'))
+    if (CUSTOM_AGENTS_TEMPLATE && !GENERATE_AGENTS) {
+      log.warn('--agents-template has no effect without --agents')
+    }
+
+    const readmeTemplate = CUSTOM_README_TEMPLATE
+      ? await validateTemplate(CUSTOM_README_TEMPLATE, 'README template')
+      : await readFile(path.join(SCRIPT_DIR, 'templates/README_TEMPLATE.md'))
+
     const agentsTemplate = GENERATE_AGENTS
-      ? await readFile(path.join(SCRIPT_DIR, 'templates/AGENTS_TEMPLATE.md'))
+      ? CUSTOM_AGENTS_TEMPLATE
+        ? await validateTemplate(CUSTOM_AGENTS_TEMPLATE, 'Agents template')
+        : await readFile(path.join(SCRIPT_DIR, 'templates/AGENTS_TEMPLATE.md'))
       : undefined
 
     // Spinner for the only long-running async step
@@ -203,7 +213,7 @@ export async function runWorkflow(): Promise<void> {
     let agentsContent: string | undefined
     try {
       const result = await runAgentWorkflow({
-        model: OPENAI_MODEL, inputFile: INPUT_FILE,
+        model: OPENAI_MODEL,
         readmeTemplate, agentsTemplate, verbose: Boolean(args.verbose),
       })
       readmeContent = result.readme
@@ -277,12 +287,13 @@ ${pc.yellow('Options:')}
   --verbose                 Show detailed agent output
   --interactive             Pause between steps for review
   --check                   Only check dependencies, don't run workflow
-  --input FILE              Read current content from specified file instead of README.md
   --output FILE             Output to specified file instead of README.md
   --model MODEL             Override the default OpenAI model (default: gpt-5-nano)
   --no-backup               Skip creating backup files before overwriting
   --agents                  Also generate AGENTS.md (reuses Researcher output from Step 1)
   --agents-output FILE      Output AGENTS.md to specified file (default: AGENTS.md)
+  --template FILE           Use a custom README template instead of the built-in one
+  --agents-template FILE    Use a custom AGENTS.md template (requires --agents)
   --ci                      Run lightweight diff-focused CI mode (safe for every PR)
   --base-ref REF            Base ref for CI diff (default: main)
   --head-ref REF            Head ref for CI diff (default: HEAD)
@@ -308,6 +319,8 @@ ${pc.yellow('Examples:')}
   rereadme --model gpt-4o                     # Use a different OpenAI model
   rereadme --output README-v2.md              # Output to custom filename
   rereadme --input some_doc.md --output test_doc.md  # Read from one file, write to another
+  rereadme --output README-v2.md     # Output to custom filename
+  rereadme --template MY_TEMPLATE.md                # Use a custom README template
   rereadme --ci                               # CI mode: analyze diff against main
   rereadme --ci --base-ref origin/main        # CI mode with explicit base ref
   rereadme --ci --verbose                     # CI mode with agent trace output
