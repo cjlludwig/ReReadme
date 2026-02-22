@@ -98,12 +98,68 @@ describe("Filesystem Tools", () => {
     })
 })
 
+// Test git diff tools
+describe("Git Diff Tools", () => {
+    let tools: typeof import('./lib/tools.js')
+
+    beforeEach(async () => {
+        tools = await import('./lib/tools.js')
+    })
+
+    describe("git_diff_stat", () => {
+        it("should return 'No changes.' for identical refs", async () => {
+            const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD', toRef: 'HEAD' })
+            expect(result).toBe('No changes.')
+        })
+
+        it("should return string output for valid refs", async () => {
+            const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD~3', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+        })
+    })
+
+    describe("git_log", () => {
+        it("should return string output for HEAD~3...HEAD", async () => {
+            const result = await invokeTool(tools.gitLog, { fromRef: 'HEAD~3', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+            expect(result.length).toBeGreaterThan(0)
+        })
+    })
+
+    describe("git_diff", () => {
+        it("should return 'No diff found.' for identical refs", async () => {
+            const result = await invokeTool(tools.gitDiff, { fromRef: 'HEAD', toRef: 'HEAD' })
+            expect(result).toBe('No diff found.')
+        })
+
+        it("should return error string (not throw) for invalid refs", async () => {
+            const result = await invokeTool(tools.gitDiff, { fromRef: 'nonexistent-ref-xyz', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+            expect(result).toMatch(/Error:|No diff found\./)
+        })
+    })
+
+    describe("diffTools export", () => {
+        it("should export diffTools array", async () => {
+            expect(tools.diffTools).toBeDefined()
+            expect(Array.isArray(tools.diffTools)).toBe(true)
+            expect(tools.diffTools.length).toBe(4)
+        })
+    })
+})
+
 // Test the agent runner module structure
 describe("Agent Runner", () => {
     it("should export runAgentWorkflow function", async () => {
         const runner = await import('./lib/runner.js')
         expect(runner.runAgentWorkflow).toBeDefined()
         expect(typeof runner.runAgentWorkflow).toBe('function')
+    })
+
+    it("should export runDiffWorkflow function", async () => {
+        const runner = await import('./lib/runner.js')
+        expect(runner.runDiffWorkflow).toBeDefined()
+        expect(typeof runner.runDiffWorkflow).toBe('function')
     })
 })
 
@@ -113,6 +169,25 @@ describe("Agent Definitions", () => {
         const agents = await import('./lib/agents.js')
         expect(agents.createAgents).toBeDefined()
         expect(typeof agents.createAgents).toBe('function')
+    })
+
+    it("should export createDiffAgents function", async () => {
+        const agents = await import('./lib/agents.js')
+        expect(agents.createDiffAgents).toBeDefined()
+        expect(typeof agents.createDiffAgents).toBe('function')
+    })
+
+    it("should createDiffAgents return diffAnalyzer and readmePatcher", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.diffAnalyzer).toBeDefined()
+        expect(result.readmePatcher).toBeDefined()
+    })
+
+    it("should diffAnalyzer have outputType defined", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.diffAnalyzer.outputType).toBeDefined()
     })
 
     it("should create all three agents", async () => {

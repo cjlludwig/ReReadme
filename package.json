@@ -32,6 +32,7 @@
     "check": "tsx script.ts --check",
     "refresh": "tsx script.ts",
     "refresh:interactive": "tsx script.ts --interactive",
+    "ci": "tsx script.ts --ci",
     "help": "tsx script.ts --help",
     "setup": "git submodule update --init evals/datasets/express-server evals/datasets/rereadme && cd evals && uv sync",
     "eval": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server.py test_rereadme.py test_express_server_agents.py test_rereadme_agents.py -v",

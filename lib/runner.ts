@@ -1,7 +1,68 @@
 import { run, withTrace } from '@openai/agents';
-import { createAgents } from './agents.js';
+import { createAgents, createDiffAgents, type DiffAnalysis } from './agents.js';
 import * as fs from 'node:fs';
 import * as log from './logger.js';
+
+export interface DiffWorkflowOptions {
+  model: string;
+  inputFile: string;
+  baseRef: string;
+  headRef: string;
+  verbose?: boolean;
+}
+
+export interface DiffWorkflowResult {
+  significant: boolean;
+  analysis: DiffAnalysis;
+  suggestions?: string;
+}
+
+export async function runDiffWorkflow(
+  options: DiffWorkflowOptions,
+): Promise<DiffWorkflowResult> {
+  const { model, inputFile, baseRef, headRef } = options;
+
+  const { diffAnalyzer, readmePatcher } = createDiffAgents(model);
+
+  return withTrace('ReReadme Diff Workflow', async () => {
+    // Step 1: DiffAnalyzer classifies the changes
+    log.verboseStep(`Step 1/2: DiffAnalyzer (${baseRef}...${headRef})`);
+    const step1 = await run(
+      diffAnalyzer,
+      `Analyze the git diff between '${baseRef}' and '${headRef}'. Determine whether the changes warrant a README update and classify what changed.`,
+      { maxTurns: 15 },
+    );
+    if (!step1.finalOutput) {
+      throw new Error('DiffAnalyzer produced no output');
+    }
+    const analysis = step1.finalOutput;
+    log.verboseStep(`DiffAnalyzer done (significant=${analysis.significant}, level=${analysis.signalLevel})`);
+
+    if (!analysis.significant) {
+      return { significant: false, analysis };
+    }
+
+    // Step 2: ReadmePatcher generates surgical suggestions
+    log.verboseStep('Step 2/2: ReadmePatcher');
+    const currentReadme = fs.existsSync(inputFile)
+      ? fs.readFileSync(inputFile, 'utf-8')
+      : '(no README found)';
+
+    const patcherPrompt = `Here is the diff analysis:\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\`\n\nHere is the current README content:\n\`\`\`\n${currentReadme}\n\`\`\`\n\nGenerate README-suggestions.md with targeted suggestions for updating the README based on the analysis.`;
+
+    const step2 = await run(readmePatcher, patcherPrompt, { maxTurns: 10 });
+    if (!step2.finalOutput || typeof step2.finalOutput !== 'string' || step2.finalOutput.trim().length === 0) {
+      throw new Error('ReadmePatcher produced no output');
+    }
+    log.verboseStep(`ReadmePatcher done (${step2.finalOutput.length} chars)`);
+
+    return {
+      significant: true,
+      analysis,
+      suggestions: stripFences(step2.finalOutput),
+    };
+  });
+}
 
 export interface AgentWorkflowOptions {
   model: string;
