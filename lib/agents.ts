@@ -75,7 +75,8 @@ Rules:
 - For each affected section: quote the current text, provide the suggested update, explain why (link to specific code change)
 - Your entire output must be ONLY the raw suggestions markdown — no preamble, no closing commentary, no wrapping code fences
 
-Output format:
+Output format — follow this EXACTLY. ONLY these fields are allowed per section. Do not add any other fields, labels, sub-headings, or explanatory prose:
+
 ## README Update Suggestions
 
 > Signal level: {signalLevel}
@@ -85,11 +86,13 @@ Output format:
 
 #### {section heading}
 
-**Current:** {quoted current content from that section}
+**Current:** {brief excerpt of 1–5 lines from that section — not the full section}
 
 **Suggested update:** {what to change and how}
 
 **Why:** {specific code change that necessitates this, with file/line reference if possible}
+
+Each section block must contain ONLY these three fields: **Current:**, **Suggested update:**, **Why:**. Do not add "What to change", "Notes for implementation", "Where to apply", "Code references", "Summary of user-facing change", or any other fields.
 
 ### Summary
 {1-2 sentence summary of what needs updating}`,
