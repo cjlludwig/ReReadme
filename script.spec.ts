@@ -412,7 +412,7 @@ describe("ReadmeSuggestionSchema and renderSuggestions", () => {
     it("should renderSuggestions include section heading", async () => {
         const runner = await import('./lib/runner.js')
         const output = runner.renderSuggestions(validFixture)
-        expect(output).toContain('## Usage')
+        expect(output).toContain('**Section:** Usage')
     })
 
     it("should renderSuggestions include diff block with - and + prefixed lines", async () => {
@@ -432,7 +432,7 @@ describe("ReadmeSuggestionSchema and renderSuggestions", () => {
     it("should renderSuggestions include signal level", async () => {
         const runner = await import('./lib/runner.js')
         const output = runner.renderSuggestions(validFixture)
-        expect(output).toContain('**high**')
+        expect(output).toContain('[!CAUTION]')
     })
 
     it("should renderSuggestions include details block when fullReadme is provided", async () => {
