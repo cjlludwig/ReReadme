@@ -138,6 +138,7 @@ dist
 
 *backup-*
 script.js
+README-suggestions.md
 
 # Experiments + Evals
 evals/__pycache__/

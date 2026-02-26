@@ -130,3 +130,71 @@ export const getStructure = tool({
 });
 
 export const allTools = [listDirectory, readFile, searchCode, getStructure];
+
+export const gitDiffStat = tool({
+  name: 'git_diff_stat',
+  description:
+    'Get a summary of which files changed and line counts between two git refs. Call this first to understand the scope of changes.',
+  parameters: z.object({
+    fromRef: z.string().describe('Base ref (e.g. "main" or "origin/main")'),
+    toRef: z.string().default('HEAD').describe('Head ref (e.g. "HEAD")'),
+  }),
+  execute: async (input) => {
+    const cmd = `git -C ${JSON.stringify(ROOT)} diff --stat ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)}`;
+    try {
+      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      return output.trim() || 'No changes.';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Error: ${msg}`;
+    }
+  },
+});
+
+export const gitLog = tool({
+  name: 'git_log',
+  description:
+    'Get commit messages between two git refs for intent context. Provides oneline summaries of what changed and why.',
+  parameters: z.object({
+    fromRef: z.string().describe('Base ref (e.g. "main" or "origin/main")'),
+    toRef: z.string().default('HEAD').describe('Head ref (e.g. "HEAD")'),
+    maxCount: z.number().default(20).describe('Maximum number of commits to return'),
+  }),
+  execute: async (input) => {
+    const cmd = `git -C ${JSON.stringify(ROOT)} log --oneline --no-decorate -${input.maxCount} ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)}`;
+    try {
+      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      return output.trim() || 'No commits found.';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Error: ${msg}`;
+    }
+  },
+});
+
+export const gitDiff = tool({
+  name: 'git_diff',
+  description:
+    'Get the full unified diff between two git refs, capped at 800 lines. Use pathFilter to narrow to specific files when the diff is large.',
+  parameters: z.object({
+    fromRef: z.string().describe('Base ref (e.g. "main" or "origin/main")'),
+    toRef: z.string().default('HEAD').describe('Head ref (e.g. "HEAD")'),
+    pathFilter: z
+      .string()
+      .default('')
+      .describe('Optional path filter (e.g. "src/" or "*.ts"). Empty string for no filter.'),
+  }),
+  execute: async (input) => {
+    const pathPart = input.pathFilter ? `-- ${JSON.stringify(input.pathFilter)}` : '';
+    const cmd = `git -C ${JSON.stringify(ROOT)} diff ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)} ${pathPart} | head -800`;
+    try {
+      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024, shell: '/bin/sh' });
+      return output.trim() || 'No diff found.';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Error: ${msg}`;
+    }
+  },
+});
+
+export const diffTools = [gitDiffStat, gitLog, gitDiff, readFile];

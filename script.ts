@@ -3,7 +3,7 @@
 // rereadme - CLI tool to automatically update README files
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
-import { runAgentWorkflow } from './lib/runner.js'
+import { runAgentWorkflow, runDiffWorkflow, renderSuggestions, applyPatches } from './lib/runner.js'
 import { validateTemplate } from './lib/validate.js'
 import * as log from './lib/logger.js'
 import pc from 'picocolors'
@@ -21,6 +21,10 @@ const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
 const GENERATE_AGENTS = Boolean(args.agents)
 const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
 const SKIP_BACKUP = Boolean(args['no-backup'])
+const CI_MODE = Boolean(args.ci)
+const BASE_REF = typeof args['base-ref'] === 'string' ? args['base-ref'] : 'main'
+const HEAD_REF = typeof args['head-ref'] === 'string' ? args['head-ref'] : 'HEAD'
+const CI_OUTPUT = typeof args['ci-output'] === 'string' ? args['ci-output'] : 'README-suggestions.md'
 const CUSTOM_README_TEMPLATE = typeof args.template === 'string' ? args.template : undefined
 const CUSTOM_AGENTS_TEMPLATE = typeof args['agents-template'] === 'string' ? args['agents-template'] : undefined
 
@@ -46,6 +50,83 @@ export async function checkDependencies(): Promise<boolean> {
 
   for (const msg of errors) { log.error(msg) }
   return errors.length === 0
+}
+
+export async function checkCiDependencies(): Promise<boolean> {
+  const errors: string[] = []
+
+  if (!process.env.OPENAI_API_KEY) {
+    errors.push(`OPENAI_API_KEY not set\n${pc.dim('  Fix: export OPENAI_API_KEY=sk-...')}`)
+  } else {
+    log.detail('OpenAI API key found')
+  }
+
+  try {
+    const result = await $({ nothrow: true, quiet: true })`git --version`
+    if (result.exitCode === 0) {
+      log.detail('git found')
+    } else {
+      errors.push(`git not found\n${pc.dim('  Fix: install git')}`)
+    }
+  } catch {
+    errors.push(`git not found\n${pc.dim('  Fix: install git')}`)
+  }
+
+  for (const msg of errors) { log.error(msg) }
+  return errors.length === 0
+}
+
+export async function runCiWorkflow(): Promise<void> {
+  const startTime = Date.now()
+  try {
+    log.intro('rereadme --ci')
+    log.detail(`Analyzing diff: ${BASE_REF}...${HEAD_REF}`)
+
+    log.step('Checking dependencies')
+    if (!await checkCiDependencies()) { throw new Error('Missing required dependencies') }
+
+    const spinner = log.createSpinner()
+    spinner.start(`Analyzing diff ${BASE_REF}...${HEAD_REF}`)
+    let result: Awaited<ReturnType<typeof runDiffWorkflow>>
+    try {
+      result = await runDiffWorkflow({
+        model: OPENAI_MODEL,
+        inputFile: 'README.md',
+        baseRef: BASE_REF,
+        headRef: HEAD_REF,
+        verbose: Boolean(args.verbose),
+      })
+      spinner.stop('Diff analysis complete')
+    } catch (e) {
+      spinner.stop('Diff analysis failed')
+      throw e
+    }
+
+    if (!result.significant) {
+      log.detail(`Signal level: ${result.analysis.signalLevel}`)
+      log.detail(`Reason: ${result.analysis.significanceReason}`)
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+      log.outro(`Done in ${elapsed}s — no output written`)
+      return
+    }
+
+    // Write suggestions file
+    log.step(`Writing ${CI_OUTPUT}`)
+    const currentReadme = await fs.pathExists('README.md')
+      ? String(await fs.readFile('README.md', 'utf-8'))
+      : ''
+    const updatedReadme = currentReadme ? applyPatches(currentReadme, result.suggestions!) : undefined
+    await fs.writeFile(CI_OUTPUT, renderSuggestions(result.suggestions!, updatedReadme).trim() + '\n')
+    log.detail(`${CI_OUTPUT} written`)
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+    log.outro(`Done in ${elapsed}s — review ${CI_OUTPUT}`)
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    log.error(errorMessage)
+    process.exit(1)
+  }
 }
 
 async function readFile(filePath: string): Promise<string> {
@@ -217,6 +298,10 @@ ${pc.yellow('Options:')}
   --agents-output FILE      Output AGENTS.md to specified file (default: AGENTS.md)
   --template FILE           Use a custom README template instead of the built-in one
   --agents-template FILE    Use a custom AGENTS.md template (requires --agents)
+  --ci                      Run lightweight diff-focused CI mode (safe for every PR)
+  --base-ref REF            Base ref for CI diff (default: main)
+  --head-ref REF            Head ref for CI diff (default: HEAD)
+  --ci-output FILE          Output suggestions to specified file (default: README-suggestions.md)
 
 ${pc.yellow('Environment Variables:')}
   OPENAI_API_KEY  Required - Your OpenAI API key
@@ -226,14 +311,22 @@ ${pc.yellow('How it works:')}
   Agents explore the repo via filesystem tools, extract technical details,
   and generate an accurate README — no Python dependencies required.
 
+  In --ci mode, a DiffAnalyzer agent reads the git diff and determines whether
+  changes are significant enough to document. If so, a ReadmePatcher agent
+  generates surgical suggestions in README-suggestions.md instead of rewriting.
+
 ${pc.yellow('Examples:')}
-  rereadme                           # Run full workflow
-  rereadme --interactive             # Run with manual step approval
-  rereadme --verbose                 # Show detailed output
-  rereadme --check                   # Check dependencies only
-  rereadme --model gpt-4o            # Use a different OpenAI model
+  rereadme                                    # Run full workflow
+  rereadme --interactive                      # Run with manual step approval
+  rereadme --verbose                          # Show detailed output
+  rereadme --check                            # Check dependencies only
+  rereadme --model gpt-4o                     # Use a different OpenAI model
+  rereadme --output README-v2.md              # Output to custom filename
   rereadme --output README-v2.md     # Output to custom filename
   rereadme --template MY_TEMPLATE.md                # Use a custom README template
+  rereadme --ci                               # CI mode: analyze diff against main
+  rereadme --ci --base-ref origin/main        # CI mode with explicit base ref
+  rereadme --ci --verbose                     # CI mode with agent trace output
 `)
 }
 
@@ -245,8 +338,13 @@ async function main(): Promise<void> {
 
   if (args.check) {
     log.step('Checking dependencies')
-    const depsOk = await checkDependencies()
+    const depsOk = CI_MODE ? await checkCiDependencies() : await checkDependencies()
     process.exit(depsOk ? 0 : 1)
+    return
+  }
+
+  if (CI_MODE) {
+    await runCiWorkflow()
     return
   }
 

@@ -1,6 +1,98 @@
 import { Agent } from '@openai/agents';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
-import { listDirectory, readFile, searchCode, getStructure } from './tools.js';
+import { z } from 'zod';
+import { listDirectory, readFile, searchCode, getStructure, diffTools } from './tools.js';
+
+export const DiffAnalysisSchema = z.object({
+  significant: z.boolean().describe('Whether this diff warrants a README update'),
+  significanceReason: z.string().describe('One-sentence rationale for the significance decision'),
+  affectedReadmeSections: z
+    .array(z.string())
+    .describe('Exact heading text of README sections that need updating (e.g. "## Usage")'),
+  highSignalChanges: z
+    .array(z.string())
+    .describe('Concrete specifics of what changed (e.g. "new --timeout flag added to script.ts line 42")'),
+  changeSummary: z
+    .string()
+    .describe('2–4 sentence plain-English summary of what changed'),
+  signalLevel: z.enum(['high', 'medium', 'low']).describe('Overall signal level of the changes'),
+});
+
+export type DiffAnalysis = z.infer<typeof DiffAnalysisSchema>;
+
+export const ReadmeSuggestionSchema = z.object({
+  signalLevel: z.enum(['high', 'medium', 'low']),
+  significanceReason: z.string().describe('One-sentence rationale'),
+  changes: z.array(z.object({
+    sectionHeading: z.string().describe('Exact heading text (e.g. "## Usage")'),
+    currentExcerpt: z.string().describe('1–5 verbatim lines from the README section'),
+    suggestedReplacement: z.string().describe('Replacement text for that excerpt'),
+    reason: z.string().describe('Specific code change reference with file:line'),
+  })).describe('One entry per affected README section'),
+  summary: z.string().describe('1–2 sentence summary of all required changes'),
+});
+
+export type ReadmeSuggestion = z.infer<typeof ReadmeSuggestionSchema>;
+
+export function createDiffAgents(model: string) {
+  const diffAnalyzer = new Agent({
+    name: 'DiffAnalyzer',
+    model,
+    outputType: DiffAnalysisSchema,
+    tools: diffTools,
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a precise diff analysis agent. Your job is to determine whether a git diff warrants a README update and what specifically changed.
+
+Workflow:
+1. Call git_diff_stat to see which files changed and line counts
+2. Call git_log to understand commit intent
+3. Call git_diff (optionally with pathFilter for large diffs) to read the actual changes
+4. If diff is truncated, call read_file on individual changed files for more context
+5. Return structured analysis
+
+Classify changes by signal level in strict priority order:
+
+HIGH signal (always significant=true):
+- New or changed CLI flags / options
+- New or changed environment variables
+- New or changed API endpoints
+- New or changed installation steps
+- New or changed required dependencies
+- New or changed entry points
+- New or changed architecture components
+
+MEDIUM signal (evaluate carefully — only significant=true if user-visible behavior changed):
+- New exported public API
+- Significant behavior changes visible to end users
+
+LOW signal (significant=false):
+- Test-only changes
+- CI/CD configuration changes
+- Dependency version bumps with no API change
+- Internal refactors with no public API change
+- Documentation-only changes (already in README)
+- Code style / formatting changes
+
+Conservative default: when in doubt, lean toward significant=false.
+Only mark significant=true when there is clear evidence of user-visible changes.`,
+  });
+
+  const readmePatcher = new Agent({
+    name: 'ReadmePatcher',
+    model,
+    outputType: ReadmeSuggestionSchema,
+    tools: [readFile],
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a surgical README editor. You receive a diff analysis and the current README content. Produce targeted, minimal suggestions for updating the README.
+
+Rules:
+- Only produce changes for sections listed in affectedReadmeSections
+- Only document facts listed in highSignalChanges
+- currentExcerpt must be verbatim text from the README, 1–5 lines
+- suggestedReplacement must be complete, ready-to-paste replacement for that excerpt
+- reason must reference specific file and line from the diff`,
+  });
+
+  return { diffAnalyzer, readmePatcher };
+}
 
 export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
   // 2-agent pipeline: Researcher → TemplateEnforcer (with DetailFetcher handoff)

@@ -1,6 +1,117 @@
 import { run, withTrace } from '@openai/agents';
-import { createAgents } from './agents.js';
+import { createAgents, createDiffAgents, type DiffAnalysis, type ReadmeSuggestion } from './agents.js';
+import * as fs from 'node:fs';
 import * as log from './logger.js';
+
+export interface DiffWorkflowOptions {
+  model: string;
+  inputFile: string;
+  baseRef: string;
+  headRef: string;
+  verbose?: boolean;
+}
+
+export interface DiffWorkflowResult {
+  significant: boolean;
+  analysis: DiffAnalysis;
+  suggestions?: ReadmeSuggestion;
+}
+
+export async function runDiffWorkflow(
+  options: DiffWorkflowOptions,
+): Promise<DiffWorkflowResult> {
+  const { model, inputFile, baseRef, headRef } = options;
+
+  const { diffAnalyzer, readmePatcher } = createDiffAgents(model);
+
+  return withTrace('ReReadme Diff Workflow', async () => {
+    // Step 1: DiffAnalyzer classifies the changes
+    log.verboseStep(`Step 1/2: DiffAnalyzer (${baseRef}...${headRef})`);
+    const step1 = await run(
+      diffAnalyzer,
+      `Analyze the git diff between '${baseRef}' and '${headRef}'. Determine whether the changes warrant a README update and classify what changed.`,
+      { maxTurns: 50 },
+    );
+    if (!step1.finalOutput) {
+      throw new Error('DiffAnalyzer produced no output');
+    }
+    const analysis = step1.finalOutput;
+    log.verboseStep(`DiffAnalyzer done (significant=${analysis.significant}, level=${analysis.signalLevel})`);
+
+    if (!analysis.significant) {
+      return { significant: false, analysis };
+    }
+
+    // Step 2: ReadmePatcher generates surgical suggestions
+    log.verboseStep('Step 2/2: ReadmePatcher');
+    const currentReadme = fs.existsSync(inputFile)
+      ? fs.readFileSync(inputFile, 'utf-8')
+      : '(no README found)';
+
+    const patcherPrompt = `Here is the diff analysis:\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\`\n\nHere is the current README content:\n\`\`\`\n${currentReadme}\n\`\`\`\n\nGenerate README-suggestions.md with targeted suggestions for updating the README based on the analysis.`;
+
+    const step2 = await run(readmePatcher, patcherPrompt, { maxTurns: 10 });
+    if (!step2.finalOutput) {
+      throw new Error('ReadmePatcher produced no output');
+    }
+    if (step2.finalOutput.changes.length === 0) {
+      // Patcher found nothing to change despite a significant diff — exit cleanly
+      return { significant: false, analysis };
+    }
+    log.verboseStep(`ReadmePatcher done (${step2.finalOutput.changes.length} changes)`);
+
+    return {
+      significant: true,
+      analysis,
+      suggestions: step2.finalOutput,
+    };
+  });
+}
+
+export function applyPatches(original: string, suggestions: ReadmeSuggestion): string {
+  let result = original
+  for (const change of suggestions.changes) {
+    if (result.includes(change.currentExcerpt)) {
+      result = result.replace(change.currentExcerpt, change.suggestedReplacement)
+    }
+  }
+  return result
+}
+
+export function renderSuggestions(s: ReadmeSuggestion, fullReadme?: string): string {
+  const notifLevel = s.signalLevel === "high" ? '> [!CAUTION]' : s.signalLevel === "medium" ? '> [!WARNING]' : '> [!TIP]'
+  const lines: string[] = []
+  lines.push(notifLevel)
+  lines.push(`> ${s.significanceReason}`)
+  lines.push('')
+  lines.push('## README Update Suggestions')
+  for (const change of s.changes) {
+    lines.push('')
+    lines.push(`**Section:** ${change.sectionHeading.replaceAll('#', '').trim()}`)
+    lines.push(`**Why:** ${change.reason}`)
+    lines.push('')
+    lines.push('```diff')
+    for (const line of change.currentExcerpt.split('\n')) lines.push(`- ${line}`)
+    for (const line of change.suggestedReplacement.split('\n')) lines.push(`+ ${line}`)
+    lines.push('```')
+  }
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push(`*${s.summary}*`)
+  if (fullReadme) {
+    lines.push('')
+    lines.push('<details>')
+    lines.push('<summary>Full README (copy-paste ready)</summary>')
+    lines.push('')
+    lines.push('``````markdown')
+    lines.push(fullReadme.trim())
+    lines.push('``````')
+    lines.push('')
+    lines.push('</details>')
+  }
+  return lines.join('\n')
+}
 
 export interface AgentWorkflowOptions {
   model: string;

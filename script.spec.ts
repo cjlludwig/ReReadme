@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, afterEach } from '@jest/globals'
 import { tmpdir } from 'os'
-import { writeFile, mkdir, rm } from 'fs/promises'
+import { writeFile, rm, mkdtemp } from 'fs/promises'
 import { join } from 'path'
 import { validateTemplate } from './lib/validate.js'
 
@@ -14,8 +14,7 @@ describe("validateTemplate", () => {
     let tmpDir: string
 
     beforeEach(async () => {
-        tmpDir = join(tmpdir(), `rereadme-test-${Date.now()}`)
-        await mkdir(tmpDir, { recursive: true })
+        tmpDir = await mkdtemp(join(tmpdir(), 'rereadme-test-'))
     })
 
     afterEach(async () => {
@@ -179,12 +178,68 @@ describe("Filesystem Tools", () => {
     })
 })
 
+// Test git diff tools
+describe("Git Diff Tools", () => {
+    let tools: typeof import('./lib/tools.js')
+
+    beforeEach(async () => {
+        tools = await import('./lib/tools.js')
+    })
+
+    describe("git_diff_stat", () => {
+        it("should return 'No changes.' for identical refs", async () => {
+            const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD', toRef: 'HEAD' })
+            expect(result).toBe('No changes.')
+        })
+
+        it("should return string output for valid refs", async () => {
+            const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD~3', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+        })
+    })
+
+    describe("git_log", () => {
+        it("should return string output for HEAD~3...HEAD", async () => {
+            const result = await invokeTool(tools.gitLog, { fromRef: 'HEAD~3', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+            expect(result.length).toBeGreaterThan(0)
+        })
+    })
+
+    describe("git_diff", () => {
+        it("should return 'No diff found.' for identical refs", async () => {
+            const result = await invokeTool(tools.gitDiff, { fromRef: 'HEAD', toRef: 'HEAD' })
+            expect(result).toBe('No diff found.')
+        })
+
+        it("should return error string (not throw) for invalid refs", async () => {
+            const result = await invokeTool(tools.gitDiff, { fromRef: 'nonexistent-ref-xyz', toRef: 'HEAD' })
+            expect(typeof result).toBe('string')
+            expect(result).toMatch(/Error:|No diff found\./)
+        })
+    })
+
+    describe("diffTools export", () => {
+        it("should export diffTools array", async () => {
+            expect(tools.diffTools).toBeDefined()
+            expect(Array.isArray(tools.diffTools)).toBe(true)
+            expect(tools.diffTools.length).toBe(4)
+        })
+    })
+})
+
 // Test the agent runner module structure
 describe("Agent Runner", () => {
     it("should export runAgentWorkflow function", async () => {
         const runner = await import('./lib/runner.js')
         expect(runner.runAgentWorkflow).toBeDefined()
         expect(typeof runner.runAgentWorkflow).toBe('function')
+    })
+
+    it("should export runDiffWorkflow function", async () => {
+        const runner = await import('./lib/runner.js')
+        expect(runner.runDiffWorkflow).toBeDefined()
+        expect(typeof runner.runDiffWorkflow).toBe('function')
     })
 })
 
@@ -194,6 +249,25 @@ describe("Agent Definitions", () => {
         const agents = await import('./lib/agents.js')
         expect(agents.createAgents).toBeDefined()
         expect(typeof agents.createAgents).toBe('function')
+    })
+
+    it("should export createDiffAgents function", async () => {
+        const agents = await import('./lib/agents.js')
+        expect(agents.createDiffAgents).toBeDefined()
+        expect(typeof agents.createDiffAgents).toBe('function')
+    })
+
+    it("should createDiffAgents return diffAnalyzer and readmePatcher", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.diffAnalyzer).toBeDefined()
+        expect(result.readmePatcher).toBeDefined()
+    })
+
+    it("should diffAnalyzer have outputType defined", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.diffAnalyzer.outputType).toBeDefined()
     })
 
     it("should create all three agents", async () => {
@@ -225,5 +299,156 @@ describe("Agent Definitions", () => {
             (h: { name?: string; agent?: { name: string } }) => h.name ?? h.agent?.name
         )
         expect(handoffNames).toContain('DetailFetcher')
+    })
+
+    it("should readmePatcher have outputType defined", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.readmePatcher.outputType).toBeDefined()
+    })
+})
+
+describe("applyPatches", () => {
+    it("should apply a single patch", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nrereadme --ci\n\nEnd.'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [{ sectionHeading: '## Usage', currentExcerpt: 'rereadme --ci', suggestedReplacement: 'rereadme --ci --timeout 30', reason: 'x' }],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe('# Hello\n\nrereadme --ci --timeout 30\n\nEnd.')
+    })
+
+    it("should skip patches where excerpt is not found", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nsome content\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [{ sectionHeading: '## Usage', currentExcerpt: 'nonexistent text', suggestedReplacement: 'replacement', reason: 'x' }],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe(original)
+    })
+
+    it("should apply multiple patches sequentially", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nfoo\n\nbar\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [
+                { sectionHeading: '## A', currentExcerpt: 'foo', suggestedReplacement: 'FOO', reason: 'x' },
+                { sectionHeading: '## B', currentExcerpt: 'bar', suggestedReplacement: 'BAR', reason: 'y' },
+            ],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe('# Hello\n\nFOO\n\nBAR\n')
+    })
+
+    it("should return original unchanged when changes is empty", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nsome content\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe(original)
+    })
+})
+
+describe("ReadmeSuggestionSchema and renderSuggestions", () => {
+    const validFixture = {
+        signalLevel: 'high' as const,
+        significanceReason: 'New --timeout flag added',
+        changes: [
+            {
+                sectionHeading: '## Usage',
+                currentExcerpt: 'rereadme --ci',
+                suggestedReplacement: 'rereadme --ci --timeout 30',
+                reason: 'script.ts:42 added --timeout flag',
+            },
+        ],
+        summary: 'The --timeout flag was added to the CLI.',
+    }
+
+    it("should export ReadmeSuggestionSchema from agents", async () => {
+        const agents = await import('./lib/agents.js')
+        expect(agents.ReadmeSuggestionSchema).toBeDefined()
+    })
+
+    it("should validate a valid fixture", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.ReadmeSuggestionSchema.safeParse(validFixture)
+        expect(result.success).toBe(true)
+    })
+
+    it("should reject fixture missing required fields", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.ReadmeSuggestionSchema.safeParse({ signalLevel: 'high' })
+        expect(result.success).toBe(false)
+    })
+
+    it("should export renderSuggestions from runner", async () => {
+        const runner = await import('./lib/runner.js')
+        expect(runner.renderSuggestions).toBeDefined()
+        expect(typeof runner.renderSuggestions).toBe('function')
+    })
+
+    it("should renderSuggestions include heading", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('## README Update Suggestions')
+    })
+
+    it("should renderSuggestions include section heading", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('**Section:** Usage')
+    })
+
+    it("should renderSuggestions include diff block with - and + prefixed lines", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('```diff')
+        expect(output).toContain('- rereadme --ci')
+        expect(output).toContain('+ rereadme --ci --timeout 30')
+    })
+
+    it("should renderSuggestions include reason text", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('script.ts:42 added --timeout flag')
+    })
+
+    it("should renderSuggestions include signal level", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('[!CAUTION]')
+    })
+
+    it("should renderSuggestions include details block when fullReadme is provided", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture, '# My README\n\nContent here.\n')
+        expect(output).toContain('<details>')
+        expect(output).toContain('<summary>Full README (copy-paste ready)</summary>')
+        expect(output).toContain('```markdown')
+        expect(output).toContain('# My README')
+        expect(output).toContain('Content here.')
+        expect(output).toContain('</details>')
+    })
+
+    it("should renderSuggestions not include details block when fullReadme is omitted", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).not.toContain('<details>')
     })
 })
