@@ -75,7 +75,7 @@ export function renderSuggestions(s: ReadmeSuggestion): string {
   lines.push('### Changes Required')
   for (const change of s.changes) {
     lines.push('')
-    lines.push(`#### ${change.sectionHeading}`)
+    lines.push(`**Section:** ${change.sectionHeading.replaceAll('#', '').trim()}`)
     lines.push('')
     lines.push(`**Why:** ${change.reason}`)
     lines.push('')
