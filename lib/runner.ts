@@ -51,8 +51,12 @@ export async function runDiffWorkflow(
     const patcherPrompt = `Here is the diff analysis:\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\`\n\nHere is the current README content:\n\`\`\`\n${currentReadme}\n\`\`\`\n\nGenerate README-suggestions.md with targeted suggestions for updating the README based on the analysis.`;
 
     const step2 = await run(readmePatcher, patcherPrompt, { maxTurns: 10 });
-    if (!step2.finalOutput || step2.finalOutput.changes.length === 0) {
+    if (!step2.finalOutput) {
       throw new Error('ReadmePatcher produced no output');
+    }
+    if (step2.finalOutput.changes.length === 0) {
+      // Patcher found nothing to change despite a significant diff — exit cleanly
+      return { significant: false, analysis };
     }
     log.verboseStep(`ReadmePatcher done (${step2.finalOutput.changes.length} changes)`);
 
