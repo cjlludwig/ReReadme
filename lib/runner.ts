@@ -106,9 +106,9 @@ export function renderSuggestions(s: ReadmeSuggestion, fullReadme?: string): str
     lines.push('<details>')
     lines.push('<summary>Full README (copy-paste ready)</summary>')
     lines.push('')
-    lines.push('```markdown')
+    lines.push('``````markdown')
     lines.push(fullReadme.trim())
-    lines.push('```')
+    lines.push('``````')
     lines.push('')
     lines.push('</details>')
   }
