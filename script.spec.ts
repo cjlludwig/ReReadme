@@ -308,6 +308,63 @@ describe("Agent Definitions", () => {
     })
 })
 
+describe("applyPatches", () => {
+    it("should apply a single patch", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nrereadme --ci\n\nEnd.'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [{ sectionHeading: '## Usage', currentExcerpt: 'rereadme --ci', suggestedReplacement: 'rereadme --ci --timeout 30', reason: 'x' }],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe('# Hello\n\nrereadme --ci --timeout 30\n\nEnd.')
+    })
+
+    it("should skip patches where excerpt is not found", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nsome content\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [{ sectionHeading: '## Usage', currentExcerpt: 'nonexistent text', suggestedReplacement: 'replacement', reason: 'x' }],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe(original)
+    })
+
+    it("should apply multiple patches sequentially", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nfoo\n\nbar\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [
+                { sectionHeading: '## A', currentExcerpt: 'foo', suggestedReplacement: 'FOO', reason: 'x' },
+                { sectionHeading: '## B', currentExcerpt: 'bar', suggestedReplacement: 'BAR', reason: 'y' },
+            ],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe('# Hello\n\nFOO\n\nBAR\n')
+    })
+
+    it("should return original unchanged when changes is empty", async () => {
+        const runner = await import('./lib/runner.js')
+        const original = '# Hello\n\nsome content\n'
+        const suggestions = {
+            signalLevel: 'low' as const,
+            significanceReason: 'test',
+            changes: [],
+            summary: 'test',
+        }
+        const result = runner.applyPatches(original, suggestions)
+        expect(result).toBe(original)
+    })
+})
+
 describe("ReadmeSuggestionSchema and renderSuggestions", () => {
     const validFixture = {
         signalLevel: 'high' as const,
@@ -376,5 +433,22 @@ describe("ReadmeSuggestionSchema and renderSuggestions", () => {
         const runner = await import('./lib/runner.js')
         const output = runner.renderSuggestions(validFixture)
         expect(output).toContain('**high**')
+    })
+
+    it("should renderSuggestions include details block when fullReadme is provided", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture, '# My README\n\nContent here.\n')
+        expect(output).toContain('<details>')
+        expect(output).toContain('<summary>Full README (copy-paste ready)</summary>')
+        expect(output).toContain('```markdown')
+        expect(output).toContain('# My README')
+        expect(output).toContain('Content here.')
+        expect(output).toContain('</details>')
+    })
+
+    it("should renderSuggestions not include details block when fullReadme is omitted", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).not.toContain('<details>')
     })
 })

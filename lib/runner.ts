@@ -64,7 +64,17 @@ export async function runDiffWorkflow(
   });
 }
 
-export function renderSuggestions(s: ReadmeSuggestion): string {
+export function applyPatches(original: string, suggestions: ReadmeSuggestion): string {
+  let result = original
+  for (const change of suggestions.changes) {
+    if (result.includes(change.currentExcerpt)) {
+      result = result.replace(change.currentExcerpt, change.suggestedReplacement)
+    }
+  }
+  return result
+}
+
+export function renderSuggestions(s: ReadmeSuggestion, fullReadme?: string): string {
   const notifLevel = s.signalLevel === "high" ? '> [!CAUTION]' : s.signalLevel === "medium" ? '> [!WARNING]' : '> [!TIP]'
   const lines: string[] = []
   lines.push(notifLevel)
@@ -87,6 +97,17 @@ export function renderSuggestions(s: ReadmeSuggestion): string {
   lines.push('---')
   lines.push('')
   lines.push(`*${s.summary}*`)
+  if (fullReadme) {
+    lines.push('')
+    lines.push('<details>')
+    lines.push('<summary>Full README (copy-paste ready)</summary>')
+    lines.push('')
+    lines.push('```markdown')
+    lines.push(fullReadme.trim())
+    lines.push('```')
+    lines.push('')
+    lines.push('</details>')
+  }
   return lines.join('\n')
 }
 
