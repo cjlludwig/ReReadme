@@ -67,10 +67,10 @@ export async function runDiffWorkflow(
 export function renderSuggestions(s: ReadmeSuggestion): string {
   const notifLevel = s.signalLevel === "high" ? '> [!CAUTION]' : s.signalLevel === "medium" ? '> [!WARNING]' : '> [!TIP]'
   const lines: string[] = []
-  lines.push('## README Update Suggestions')
-  lines.push('')
   lines.push(notifLevel)
   lines.push(`> ${s.significanceReason}`)
+  lines.push('')
+  lines.push('## README Update Suggestions')
   lines.push('')
   lines.push('### Changes Required')
   for (const change of s.changes) {
