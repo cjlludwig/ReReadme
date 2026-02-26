@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
 
       - name: Analyze diff and generate README suggestions
-        run: npm run dev -- --ci --base-ref origin/main --head-ref HEAD
+        run: npm run dev -- --ci --verbose --base-ref origin/main --head-ref HEAD
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
