@@ -85,11 +85,9 @@ export function renderSuggestions(s: ReadmeSuggestion, fullReadme?: string): str
   lines.push(`> ${s.significanceReason}`)
   lines.push('')
   lines.push('## README Update Suggestions')
-  lines.push('')
   for (const change of s.changes) {
     lines.push('')
     lines.push(`**Section:** ${change.sectionHeading.replaceAll('#', '').trim()}`)
-    lines.push('')
     lines.push(`**Why:** ${change.reason}`)
     lines.push('')
     lines.push('```diff')
