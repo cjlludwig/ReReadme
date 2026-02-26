@@ -20,6 +20,20 @@ export const DiffAnalysisSchema = z.object({
 
 export type DiffAnalysis = z.infer<typeof DiffAnalysisSchema>;
 
+export const ReadmeSuggestionSchema = z.object({
+  signalLevel: z.enum(['high', 'medium', 'low']),
+  significanceReason: z.string().describe('One-sentence rationale'),
+  changes: z.array(z.object({
+    sectionHeading: z.string().describe('Exact heading text (e.g. "## Usage")'),
+    currentExcerpt: z.string().describe('1–5 verbatim lines from the README section'),
+    suggestedReplacement: z.string().describe('Replacement text for that excerpt'),
+    reason: z.string().describe('Specific code change reference with file:line'),
+  })).describe('One entry per affected README section'),
+  summary: z.string().describe('1–2 sentence summary of all required changes'),
+});
+
+export type ReadmeSuggestion = z.infer<typeof ReadmeSuggestionSchema>;
+
 export function createDiffAgents(model: string) {
   const diffAnalyzer = new Agent({
     name: 'DiffAnalyzer',
@@ -65,37 +79,16 @@ Only mark significant=true when there is clear evidence of user-visible changes.
   const readmePatcher = new Agent({
     name: 'ReadmePatcher',
     model,
+    outputType: ReadmeSuggestionSchema,
     tools: [readFile],
-    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a surgical README editor. You receive a diff analysis and the current README content. Your job is to produce a README-suggestions.md file with targeted, minimal suggestions.
+    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a surgical README editor. You receive a diff analysis and the current README content. Produce targeted, minimal suggestions for updating the README.
 
 Rules:
-- Only suggest changes to sections listed in affectedReadmeSections
+- Only produce changes for sections listed in affectedReadmeSections
 - Only document facts listed in highSignalChanges
-- Do NOT rewrite the whole README — produce surgical suggestions only
-- For each affected section: quote the current text, provide the suggested update, explain why (link to specific code change)
-- Your entire output must be ONLY the raw suggestions markdown — no preamble, no closing commentary, no wrapping code fences
-
-Output format — follow this EXACTLY. ONLY these fields are allowed per section. Do not add any other fields, labels, sub-headings, or explanatory prose:
-
-## README Update Suggestions
-
-> Signal level: {signalLevel}
-> {significanceReason}
-
-### Changes Required
-
-#### {section heading}
-
-**Current:** {brief excerpt of 1–5 lines from that section — not the full section}
-
-**Suggested update:** {what to change and how}
-
-**Why:** {specific code change that necessitates this, with file/line reference if possible}
-
-Each section block must contain ONLY these three fields: **Current:**, **Suggested update:**, **Why:**. Do not add "What to change", "Notes for implementation", "Where to apply", "Code references", "Summary of user-facing change", or any other fields.
-
-### Summary
-{1-2 sentence summary of what needs updating}`,
+- currentExcerpt must be verbatim text from the README, 1–5 lines
+- suggestedReplacement must be complete, ready-to-paste replacement for that excerpt
+- reason must reference specific file and line from the diff`,
   });
 
   return { diffAnalyzer, readmePatcher };

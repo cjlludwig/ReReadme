@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, afterEach } from '@jest/globals'
 import { tmpdir } from 'os'
-import { writeFile, mkdir, rm } from 'fs/promises'
+import { writeFile, rm, mkdtemp } from 'fs/promises'
 import { join } from 'path'
 import { validateTemplate } from './lib/validate.js'
 
@@ -14,8 +14,7 @@ describe("validateTemplate", () => {
     let tmpDir: string
 
     beforeEach(async () => {
-        tmpDir = join(tmpdir(), `rereadme-test-${Date.now()}`)
-        await mkdir(tmpDir, { recursive: true })
+        tmpDir = await mkdtemp(join(tmpdir(), 'rereadme-test-'))
     })
 
     afterEach(async () => {
@@ -300,5 +299,82 @@ describe("Agent Definitions", () => {
             (h: { name?: string; agent?: { name: string } }) => h.name ?? h.agent?.name
         )
         expect(handoffNames).toContain('DetailFetcher')
+    })
+
+    it("should readmePatcher have outputType defined", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.createDiffAgents('gpt-5-nano')
+        expect(result.readmePatcher.outputType).toBeDefined()
+    })
+})
+
+describe("ReadmeSuggestionSchema and renderSuggestions", () => {
+    const validFixture = {
+        signalLevel: 'high' as const,
+        significanceReason: 'New --timeout flag added',
+        changes: [
+            {
+                sectionHeading: '## Usage',
+                currentExcerpt: 'rereadme --ci',
+                suggestedReplacement: 'rereadme --ci --timeout 30',
+                reason: 'script.ts:42 added --timeout flag',
+            },
+        ],
+        summary: 'The --timeout flag was added to the CLI.',
+    }
+
+    it("should export ReadmeSuggestionSchema from agents", async () => {
+        const agents = await import('./lib/agents.js')
+        expect(agents.ReadmeSuggestionSchema).toBeDefined()
+    })
+
+    it("should validate a valid fixture", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.ReadmeSuggestionSchema.safeParse(validFixture)
+        expect(result.success).toBe(true)
+    })
+
+    it("should reject fixture missing required fields", async () => {
+        const agents = await import('./lib/agents.js')
+        const result = agents.ReadmeSuggestionSchema.safeParse({ signalLevel: 'high' })
+        expect(result.success).toBe(false)
+    })
+
+    it("should export renderSuggestions from runner", async () => {
+        const runner = await import('./lib/runner.js')
+        expect(runner.renderSuggestions).toBeDefined()
+        expect(typeof runner.renderSuggestions).toBe('function')
+    })
+
+    it("should renderSuggestions include heading", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('## README Update Suggestions')
+    })
+
+    it("should renderSuggestions include section heading", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('## Usage')
+    })
+
+    it("should renderSuggestions include diff block with - and + prefixed lines", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('```diff')
+        expect(output).toContain('- rereadme --ci')
+        expect(output).toContain('+ rereadme --ci --timeout 30')
+    })
+
+    it("should renderSuggestions include reason text", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('script.ts:42 added --timeout flag')
+    })
+
+    it("should renderSuggestions include signal level", async () => {
+        const runner = await import('./lib/runner.js')
+        const output = runner.renderSuggestions(validFixture)
+        expect(output).toContain('**high**')
     })
 })

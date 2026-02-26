@@ -1,5 +1,5 @@
 import { run, withTrace } from '@openai/agents';
-import { createAgents, createDiffAgents, type DiffAnalysis } from './agents.js';
+import { createAgents, createDiffAgents, type DiffAnalysis, type ReadmeSuggestion } from './agents.js';
 import * as fs from 'node:fs';
 import * as log from './logger.js';
 
@@ -14,7 +14,7 @@ export interface DiffWorkflowOptions {
 export interface DiffWorkflowResult {
   significant: boolean;
   analysis: DiffAnalysis;
-  suggestions?: string;
+  suggestions?: ReadmeSuggestion;
 }
 
 export async function runDiffWorkflow(
@@ -51,17 +51,42 @@ export async function runDiffWorkflow(
     const patcherPrompt = `Here is the diff analysis:\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\`\n\nHere is the current README content:\n\`\`\`\n${currentReadme}\n\`\`\`\n\nGenerate README-suggestions.md with targeted suggestions for updating the README based on the analysis.`;
 
     const step2 = await run(readmePatcher, patcherPrompt, { maxTurns: 10 });
-    if (!step2.finalOutput || typeof step2.finalOutput !== 'string' || step2.finalOutput.trim().length === 0) {
+    if (!step2.finalOutput || step2.finalOutput.changes.length === 0) {
       throw new Error('ReadmePatcher produced no output');
     }
-    log.verboseStep(`ReadmePatcher done (${step2.finalOutput.length} chars)`);
+    log.verboseStep(`ReadmePatcher done (${step2.finalOutput.changes.length} changes)`);
 
     return {
       significant: true,
       analysis,
-      suggestions: stripFences(step2.finalOutput),
+      suggestions: step2.finalOutput,
     };
   });
+}
+
+export function renderSuggestions(s: ReadmeSuggestion): string {
+  const lines: string[] = []
+  lines.push('## README Update Suggestions')
+  lines.push('')
+  lines.push(`> Signal level: **${s.signalLevel}** — ${s.significanceReason}`)
+  lines.push('')
+  lines.push('### Changes Required')
+  for (const change of s.changes) {
+    lines.push('')
+    lines.push(`#### ${change.sectionHeading}`)
+    lines.push('')
+    lines.push(`**Why:** ${change.reason}`)
+    lines.push('')
+    lines.push('```diff')
+    for (const line of change.currentExcerpt.split('\n')) lines.push(`- ${line}`)
+    for (const line of change.suggestedReplacement.split('\n')) lines.push(`+ ${line}`)
+    lines.push('```')
+  }
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push(`*${s.summary}*`)
+  return lines.join('\n')
 }
 
 export interface AgentWorkflowOptions {

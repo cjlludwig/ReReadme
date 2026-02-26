@@ -3,7 +3,7 @@
 // rereadme - CLI tool to automatically update README files
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
-import { runAgentWorkflow, runDiffWorkflow } from './lib/runner.js'
+import { runAgentWorkflow, runDiffWorkflow, renderSuggestions } from './lib/runner.js'
 import { validateTemplate } from './lib/validate.js'
 import * as log from './lib/logger.js'
 import pc from 'picocolors'
@@ -112,7 +112,7 @@ export async function runCiWorkflow(): Promise<void> {
 
     // Write suggestions file
     log.step(`Writing ${CI_OUTPUT}`)
-    await fs.writeFile(CI_OUTPUT, (result.suggestions ?? '').trim() + '\n')
+    await fs.writeFile(CI_OUTPUT, renderSuggestions(result.suggestions!).trim() + '\n')
     log.detail(`${CI_OUTPUT} written`)
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
