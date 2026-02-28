@@ -15,6 +15,7 @@ export interface DiffWorkflowResult {
   significant: boolean;
   analysis: DiffAnalysis;
   suggestions?: ReadmeSuggestion;
+  noExcerptsFound?: boolean;
 }
 
 export async function runDiffWorkflow(
@@ -55,8 +56,9 @@ export async function runDiffWorkflow(
       throw new Error('ReadmePatcher produced no output');
     }
     if (step2.finalOutput.changes.length === 0) {
-      // Patcher found nothing to change despite a significant diff — exit cleanly
-      return { significant: false, analysis };
+      // Patcher found nothing to patch despite a significant diff
+      log.verboseStep('ReadmePatcher done (0 changes — no matching README excerpts found)');
+      return { significant: false, analysis, noExcerptsFound: true };
     }
     log.verboseStep(`ReadmePatcher done (${step2.finalOutput.changes.length} changes)`);
 
