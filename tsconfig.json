@@ -24,6 +24,7 @@
     "node_modules",
     "dist",
     "*.spec.ts",
+    "tests",
     "evals/datasets"
   ]
 } 

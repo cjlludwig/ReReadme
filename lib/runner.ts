@@ -72,7 +72,8 @@ export function applyPatches(original: string, suggestions: ReadmeSuggestion): s
   let result = original
   for (const change of suggestions.changes) {
     if (result.includes(change.currentExcerpt)) {
-      result = result.replace(change.currentExcerpt, change.suggestedReplacement)
+      const replacement = change.suggestedReplacement;
+      result = result.replace(change.currentExcerpt, () => replacement)
     }
   }
   return result

@@ -2,7 +2,8 @@ import { tool } from '@openai/agents';
 import { z } from 'zod';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { globby, isGitIgnored } from 'globby';
 
 const ROOT = process.cwd();
 
@@ -28,8 +29,13 @@ export const listDirectory = tool({
     const dirPath = safePath(input.path);
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     const EXCLUDED = new Set(['.git', 'node_modules']);
-    return entries
-      .filter((e) => !EXCLUDED.has(e.name))
+    const filtered = entries.filter((e) => !EXCLUDED.has(e.name));
+    const isIgnored = await isGitIgnored({ cwd: ROOT });
+    return filtered
+      .filter((e) => {
+        const rel = path.relative(ROOT, path.join(dirPath, e.name));
+        return !isIgnored(rel);
+      })
       .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
       .join('\n');
   },
@@ -47,11 +53,16 @@ export const readFile = tool({
       .describe('Line number to start reading from (0-based)'),
     maxLines: z
       .number()
+      .max(2000)
       .default(500)
       .describe('Maximum number of lines to return'),
   }),
   execute: async (input) => {
     const filePath = safePath(input.path);
+    const isIgnored = await isGitIgnored({ cwd: ROOT });
+    if (isIgnored(path.relative(ROOT, filePath))) {
+      throw new Error(`Access denied: ${input.path} is gitignored`);
+    }
     const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
     const start = Math.min(input.offset, lines.length);
@@ -78,21 +89,38 @@ export const searchCode = tool({
       .describe('File glob pattern to filter, e.g. "*.ts". Empty string for no filter.'),
   }),
   execute: async (input) => {
-    const includeFlag = input.glob ? `--include="${input.glob}"` : '';
-    const cmd = `grep -rn ${includeFlag} -- ${JSON.stringify(input.pattern)} ${JSON.stringify(ROOT)} 2>/dev/null | head -50`;
+    // Normalize short globs (e.g. "*.ts" → "**/*.ts") for recursive matching
+    const rawGlob = input.glob;
+    const pattern = rawGlob && !rawGlob.includes('/') && !rawGlob.startsWith('**')
+      ? `**/${rawGlob}`
+      : rawGlob || '**/*';
+
+    const files = await globby(pattern, {
+      cwd: ROOT,
+      gitignore: true,
+      dot: true,
+      ignore: ['.git/**', 'node_modules/**'],
+    });
+
+    let re: RegExp;
     try {
-      const output = execSync(cmd, {
-        encoding: 'utf-8',
-        maxBuffer: 1024 * 1024,
-      });
-      if (!output.trim()) {
-        return 'No matches found.';
-      }
-      // Make paths relative
-      return output.replaceAll(ROOT + '/', '');
+      re = new RegExp(input.pattern);
     } catch {
-      return 'No matches found.';
+      return 'Invalid regex pattern.';
     }
+
+    const results: string[] = [];
+    outer: for (const file of files) {
+      const content = fs.readFileSync(path.join(ROOT, file), 'utf-8');
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (re.test(lines[i])) {
+          results.push(`${file}:${i + 1}:${lines[i]}`);
+          if (results.length >= 50) break outer;
+        }
+      }
+    }
+    return results.length > 0 ? results.join('\n') : 'No matches found.';
   },
 });
 
@@ -105,6 +133,10 @@ export const getStructure = tool({
   }),
   execute: async (input) => {
     const filePath = safePath(input.path);
+    const isIgnored = await isGitIgnored({ cwd: ROOT });
+    if (isIgnored(path.relative(ROOT, filePath))) {
+      throw new Error(`Access denied: ${input.path} is gitignored`);
+    }
     const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
     const results: string[] = [];
@@ -140,9 +172,12 @@ export const gitDiffStat = tool({
     toRef: z.string().default('HEAD').describe('Head ref (e.g. "HEAD")'),
   }),
   execute: async (input) => {
-    const cmd = `git -C ${JSON.stringify(ROOT)} diff --stat ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)}`;
     try {
-      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      const output = execFileSync(
+        'git',
+        ['-C', ROOT, 'diff', '--stat', `${input.fromRef}...${input.toRef}`],
+        { encoding: 'utf-8', maxBuffer: 1024 * 1024 },
+      );
       return output.trim() || 'No changes.';
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -161,9 +196,13 @@ export const gitLog = tool({
     maxCount: z.number().default(20).describe('Maximum number of commits to return'),
   }),
   execute: async (input) => {
-    const cmd = `git -C ${JSON.stringify(ROOT)} log --oneline --no-decorate -${input.maxCount} ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)}`;
     try {
-      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      const output = execFileSync(
+        'git',
+        ['-C', ROOT, 'log', '--oneline', '--no-decorate',
+         `-${input.maxCount}`, `${input.fromRef}...${input.toRef}`],
+        { encoding: 'utf-8', maxBuffer: 1024 * 1024 },
+      );
       return output.trim() || 'No commits found.';
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -175,9 +214,9 @@ export const gitLog = tool({
 export const gitDiff = tool({
   name: 'git_diff',
   description:
-    'Get the full unified diff between two git refs, capped at 800 lines. Use pathFilter to narrow to specific files when the diff is large.',
+    'Get the full unified diff between two git refs, capped at 5000 lines. Use pathFilter to narrow to specific files when the diff is large.',
   parameters: z.object({
-    fromRef: z.string().describe('Base ref (e.g. "main" or "origin/main")'),
+    fromRef: z.string().default('origin/main').describe('Base ref (e.g. "main" or "origin/main")'),
     toRef: z.string().default('HEAD').describe('Head ref (e.g. "HEAD")'),
     pathFilter: z
       .string()
@@ -185,11 +224,12 @@ export const gitDiff = tool({
       .describe('Optional path filter (e.g. "src/" or "*.ts"). Empty string for no filter.'),
   }),
   execute: async (input) => {
-    const pathPart = input.pathFilter ? `-- ${JSON.stringify(input.pathFilter)}` : '';
-    const cmd = `git -C ${JSON.stringify(ROOT)} diff ${JSON.stringify(input.fromRef)}...${JSON.stringify(input.toRef)} ${pathPart} | head -800`;
     try {
-      const output = execSync(cmd, { encoding: 'utf-8', maxBuffer: 1024 * 1024, shell: '/bin/sh' });
-      return output.trim() || 'No diff found.';
+      const args = ['-C', ROOT, 'diff', `${input.fromRef}...${input.toRef}`];
+      if (input.pathFilter) args.push('--', input.pathFilter);
+      const output = execFileSync('git', args, { encoding: 'utf-8', maxBuffer: 1024 * 1024 });
+      const truncated = output.split('\n').slice(0, 5000).join('\n');
+      return truncated.trim() || 'No diff found.';
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return `Error: ${msg}`;

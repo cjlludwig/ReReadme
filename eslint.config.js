@@ -8,7 +8,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["eslint.config.js", "script.spec.ts"],
+          allowDefaultProject: ["eslint.config.js"],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -18,6 +18,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/", "node_modules/", "evals/", "bin/", ".claude/**"],
+    ignores: ["dist/", "node_modules/", "evals/", "bin/", ".claude/**", "tests/"],
   },
 );
