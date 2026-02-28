@@ -106,7 +106,11 @@ export async function runCiWorkflow(): Promise<void> {
       log.detail(`Signal level: ${result.analysis.signalLevel}`)
       log.detail(`Reason: ${result.analysis.significanceReason}`)
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-      log.outro(`Done in ${elapsed}s — no output written`)
+      if (result.noExcerptsFound) {
+        log.outro(`Done in ${elapsed}s — diff is significant but no README excerpts matched`)
+      } else {
+        log.outro(`Done in ${elapsed}s — no output written`)
+      }
       return
     }
 
