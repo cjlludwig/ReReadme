@@ -12,7 +12,8 @@ const __dirname = dirname(__filename);
 const scriptPath = join(__dirname, '..', 'script.ts');
 
 // Use tsx to execute the TypeScript script with all command line arguments
-const child = spawn('npx', ['tsx', scriptPath, ...process.argv.slice(2)], {
+const tsxBin = join(__dirname, '..', 'node_modules', '.bin', 'tsx');
+const child = spawn(tsxBin, [scriptPath, ...process.argv.slice(2)], {
   stdio: 'inherit',
   cwd: process.cwd()
 });
