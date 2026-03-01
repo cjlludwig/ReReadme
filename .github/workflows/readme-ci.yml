@@ -13,6 +13,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: connorludwig/rereadme@v0.0.1
+      - uses: cjlludwig/ReReadme@v0.0.1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
