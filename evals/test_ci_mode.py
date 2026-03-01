@@ -20,12 +20,14 @@ CI_CASES = [
         "expected_signal": "high",
         "keywords": ["--ci", "--base-ref", "usage"],
         "geval_criteria": (
-            "Was 'high' the correct signal level and is the reasoning sufficient? "
-            "The diff introduces new CLI flags (--ci, --base-ref, --head-ref) with no README update. "
-            "Evaluate: (1) Is the signal tier 'high'? "
-            "(2) Does the output specifically name the --ci, --base-ref, and/or --head-ref flags? "
-            "(3) Does it identify that usage documentation (a Usage section or similar) is missing coverage? "
-            "Generic or vague justification without naming the specific flags should score low."
+            "This is a README update suggestions document generated for a diff that introduced new CLI flags "
+            "(--ci, --base-ref, --head-ref, --ci-output). "
+            "Evaluate the quality and correctness of the suggestion: "
+            "(1) Does the document open with a >[!CAUTION] GitHub alert block, indicating high urgency? "
+            "(2) Does the content specifically name at least one of the new flags: '--ci', '--base-ref', '--head-ref'? "
+            "(3) Does the suggestion target a Usage section or equivalent CLI reference section? "
+            "Score high if the suggestion correctly names specific new flags and targets a relevant README section. "
+            "Score low if the suggestion is vague, names no specific flags, or targets completely unrelated content."
         ),
     },
     {
@@ -35,12 +37,13 @@ CI_CASES = [
         "expected_signal": "medium",
         "keywords": ["action"],
         "geval_criteria": (
-            "Was 'medium' (not 'high') the correct signal level for this PR? "
-            "The diff wires a reusable GitHub Action but the repo has no existing CI integration docs section. "
-            "Evaluate: (1) Is the signal tier 'medium' rather than 'high'? "
-            "(2) Does the reasoning acknowledge that this is discretionary because no CI docs section currently exists? "
-            "(3) Does it mention GitHub Actions, the action file, or 'uses:' syntax? "
-            "A response that calls this 'high' without addressing the missing CI docs section should score low."
+            "This is a README update suggestions document generated for a diff that introduced a reusable GitHub Action. "
+            "Evaluate the quality and correctness of the suggestion: "
+            "(1) Does the document open with a [!WARNING] GitHub alert block? "
+            "(2) Does the content mention GitHub Actions, composite action, action.yml, or CI integration? "
+            "(3) Is the suggestion scoped to documenting the GitHub Action as a user-facing integration feature? "
+            "Score high if the suggestion concretely describes the GitHub Action and recommends adding relevant documentation. "
+            "Score low if there is no mention of GitHub Actions or the suggestion targets completely unrelated sections."
         ),
     },
     {
@@ -50,12 +53,18 @@ CI_CASES = [
         "expected_signal": None,
         "keywords": [],
         "geval_criteria": (
-            "Given that the diff contains only internal test reorganization and code coverage improvements, "
-            "is 'no documentation suggestions' a well-reasoned conclusion? "
-            "Evaluate: (1) Is the signal level 'low' or 'none' (no file written)? "
-            "(2) Does the reasoning specifically name the type of changes (test refactor, internal extraction, coverage improvements)? "
-            "(3) Does it explain why these are non-user-facing? "
-            "Vague reasons like 'minor change' without naming specific change types should score low."
+            "This is stdout from a CI mode run where no README update file was produced (the correct outcome). "
+            "The diff contained internal test reorganization and TypeScript module extraction with no new CLI flags "
+            "or user-visible behavior changes. "
+            "Evaluate whether the tool's reasoning is appropriate: "
+            "(1) Does the stdout indicate a non-significant or low-signal classification? "
+            "   (Look for: 'Signal level: low', 'no output written', 'no README sections matched', "
+            "   or the absence of a confident high/medium signal assertion.) "
+            "(2) If the output says 'no README sections matched', is that a plausible outcome given that "
+            "   the diff had no user-visible CLI or API changes to document? "
+            "(3) Is the overall conclusion consistent with correctly skipping documentation for internal changes? "
+            "Score high if the tool's output is consistent with not documenting internal-only changes. "
+            "Score low only if the tool confidently asserts important user-visible changes occurred yet still produced no output."
         ),
     },
 ]
