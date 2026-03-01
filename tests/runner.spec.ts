@@ -1,5 +1,33 @@
 import { expect, describe, it } from '@jest/globals'
-import { applyPatches, renderSuggestions, runAgentWorkflow, runDiffWorkflow } from '../lib/runner.js'
+import { applyPatches, renderSuggestions, stripFences } from '../lib/readme-utils.js'
+import { runAgentWorkflow, runDiffWorkflow } from '../lib/runner.js'
+
+describe("stripFences", () => {
+    it("strips ```markdown fence from start and end", () => {
+        const input = '```markdown\n# Hello\n\nContent\n```'
+        expect(stripFences(input)).toBe('# Hello\n\nContent')
+    })
+
+    it("strips ```md fence from start and end", () => {
+        const input = '```md\n# Hello\n```'
+        expect(stripFences(input)).toBe('# Hello')
+    })
+
+    it("strips plain ``` fence from start and end", () => {
+        const input = '```\n# Hello\n```'
+        expect(stripFences(input)).toBe('# Hello')
+    })
+
+    it("returns string unchanged (trimmed) when no fences", () => {
+        const input = '  # Hello\n\nContent  '
+        expect(stripFences(input)).toBe('# Hello\n\nContent')
+    })
+
+    it("trims leading and trailing whitespace", () => {
+        const input = '  \n```markdown\n# Hello\n```\n  '
+        expect(stripFences(input)).toBe('# Hello')
+    })
+})
 
 describe("Agent Runner exports", () => {
     it("should export runAgentWorkflow function", () => {
@@ -134,9 +162,19 @@ describe("renderSuggestions", () => {
         expect(output).toContain('script.ts:42 added --timeout flag')
     })
 
-    it("should include signal level", () => {
+    it("should include signal level (high → CAUTION)", () => {
         const output = renderSuggestions(validFixture)
         expect(output).toContain('[!CAUTION]')
+    })
+
+    it("should use WARNING for medium signal level", () => {
+        const output = renderSuggestions({ ...validFixture, signalLevel: 'medium' })
+        expect(output).toContain('[!WARNING]')
+    })
+
+    it("should use TIP for low signal level", () => {
+        const output = renderSuggestions({ ...validFixture, signalLevel: 'low' })
+        expect(output).toContain('[!TIP]')
     })
 
     it("should include details block when fullReadme is provided", () => {

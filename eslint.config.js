@@ -18,6 +18,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/", "node_modules/", "evals/", "bin/", ".claude/**", "tests/"],
+    ignores: ["dist/", "node_modules/", "evals/", "bin/", ".claude/**", "tests/", "coverage/"],
   },
 );

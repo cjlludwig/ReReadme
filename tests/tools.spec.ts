@@ -66,6 +66,11 @@ describe("search_code", () => {
         const result = await invokeTool(tools.searchCode, { pattern: 'impossible_xyz', glob: '*.yaml' })
         expect(result).toBe('No matches found.')
     })
+
+    it("should return error message for invalid regex", async () => {
+        const result = await invokeTool(tools.searchCode, { pattern: '[invalid(' })
+        expect(result).toBe('Invalid regex pattern.')
+    })
 })
 
 describe("get_structure", () => {
@@ -78,6 +83,11 @@ describe("get_structure", () => {
     it("should reject path traversal", async () => {
         const result = await invokeTool(tools.getStructure, { path: '../../etc/passwd' })
         expect(result).toContain('Path traversal not allowed')
+    })
+
+    it("should return fallback message for file with no exports or imports", async () => {
+        const result = await invokeTool(tools.getStructure, { path: '.gitignore' })
+        expect(result).toBe('No exports, imports, or signatures found.')
     })
 })
 
@@ -103,6 +113,11 @@ describe("git_diff_stat", () => {
         const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD~3', toRef: 'HEAD' })
         expect(typeof result).toBe('string')
     })
+
+    it("should return error string for invalid ref", async () => {
+        const result = await invokeTool(tools.gitDiffStat, { fromRef: 'nonexistent-ref-xyz', toRef: 'HEAD' })
+        expect(result).toMatch(/^Error:/)
+    })
 })
 
 describe("git_log", () => {
@@ -110,6 +125,11 @@ describe("git_log", () => {
         const result = await invokeTool(tools.gitLog, { fromRef: 'HEAD~3', toRef: 'HEAD' })
         expect(typeof result).toBe('string')
         expect(result.length).toBeGreaterThan(0)
+    })
+
+    it("should return error string for invalid ref", async () => {
+        const result = await invokeTool(tools.gitLog, { fromRef: 'nonexistent-ref-xyz', toRef: 'HEAD' })
+        expect(result).toMatch(/^Error:/)
     })
 })
 
@@ -181,6 +201,11 @@ describe("security: gitignore awareness", () => {
 
     afterEach(() => {
         if (nodeFs.existsSync(gitignored)) nodeFs.unlinkSync(gitignored)
+    })
+
+    it("get_structure rejects gitignored files", async () => {
+        const result = await invokeTool(tools.getStructure, { path: gitignored })
+        expect(result).toContain('gitignored')
     })
 
     it("list_directory excludes gitignored files", async () => {
