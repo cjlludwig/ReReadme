@@ -28,7 +28,7 @@
     "dev": "tsx ./script.ts",
     "build": "tsc",
     "start": "node script.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest ./tests --coverage",
     "check": "tsx ./script.ts --check",
     "refresh": "tsx ./script.ts",
     "refresh:interactive": "tsx ./script.ts --interactive",

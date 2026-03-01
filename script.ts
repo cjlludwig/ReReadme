@@ -3,7 +3,8 @@
 // rereadme - CLI tool to automatically update README files
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
-import { runAgentWorkflow, runDiffWorkflow, renderSuggestions, applyPatches } from './lib/runner.js'
+import { runAgentWorkflow, runDiffWorkflow } from './lib/runner.js'
+import { renderSuggestions, applyPatches } from './lib/readme-utils.js'
 import { validateTemplate } from './lib/validate.js'
 import * as log from './lib/logger.js'
 import pc from 'picocolors'
