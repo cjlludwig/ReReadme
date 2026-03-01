@@ -88,6 +88,17 @@ rereadme --agents --agents-output AGENTS.md
 rereadme --template MY_TEMPLATE.md
 rereadme --agents --agents-template MY_AGENTS_TEMPLATE.md
 
+# CI mode: analyze diff and write README-suggestions.md
+rereadme --ci
+rereadme --ci --base-ref origin/main
+
+# CI mode: analyze diff and apply patches directly to README.md
+rereadme --ci --apply
+
+# Apply an existing suggestions file to README.md
+rereadme --apply
+rereadme --apply --ci-output custom-suggestions.md
+
 # Check dependencies only
 rereadme --check
 
@@ -115,6 +126,23 @@ Template requirements:
 - Must be a valid markdown file with at least one heading (`#`)
 - Use `>` blockquote lines as content placeholders (matches agent behavior)
 - Maximum size: 50KB
+
+### CI Mode
+
+`--ci` runs a lightweight diff-focused workflow safe for every PR. A DiffAnalyzer agent reads the git diff and determines whether changes are significant enough to document. If so, a ReadmePatcher agent generates surgical suggestions written to `README-suggestions.md`.
+
+Adding `--apply` writes the patched README directly to `README.md` (with a timestamped backup):
+
+```shell
+# Analyze diff and write suggestions only (safe, no README changes)
+rereadme --ci
+
+# Analyze diff and apply patches in one step
+rereadme --ci --apply
+
+# Apply a previously written suggestions file
+rereadme --apply
+```
 
 ### Workflow Steps
 
