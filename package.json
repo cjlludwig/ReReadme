@@ -38,6 +38,8 @@
     "eval:rereadme": "cd evals && NO_COLOR=1 uv run deepeval test run test_rereadme.py test_rereadme_agents.py -v",
     "eval:agents": "cd evals && NO_COLOR=1 uv run deepeval test run test_express_server_agents.py test_rereadme_agents.py -v",
     "eval:report": "cd evals && NO_COLOR=1 uv run python evaluate.py",
+    "eval:ci": "cd evals && uv run pytest test_ci_mode.py -v",
+    "eval:all": "cd evals && uv run pytest -v",
     "prepare": "husky"
   },
   "dependencies": {

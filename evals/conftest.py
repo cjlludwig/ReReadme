@@ -1,7 +1,10 @@
 import os
 import shutil
 import subprocess
+from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -12,6 +15,41 @@ GOLDEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 GOLDEN_PATH = os.path.join(GOLDEN_DIR, "express-server-README.md")
 OUTPUT_FILENAME = "README-generated.md"
 AGENTS_OUTPUT_FILENAME = "AGENTS-generated.md"
+
+
+@dataclass
+class CiRunResult:
+    returncode: int
+    stdout: str
+    suggestions: str | None  # file content if written, else None
+
+
+def run_ci(base_ref: str, head_ref: str, output_path: Path) -> CiRunResult:
+    if not os.environ.get("OPENAI_API_KEY"):
+        pytest.fail("OPENAI_API_KEY environment variable is not set")
+
+    output_path.parent.mkdir(exist_ok=True)
+
+    proc = subprocess.run(
+        [
+            "npx", "tsx", "script.ts",
+            "--ci",
+            "--base-ref", base_ref,
+            "--head-ref", head_ref,
+            "--ci-output", str(output_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        cwd=REPO_ROOT,
+    )
+
+    suggestions: str | None = None
+    if output_path.exists():
+        suggestions = output_path.read_text(encoding="utf-8")
+
+    stdout = proc.stdout + proc.stderr  # merge for signal level logging
+    return CiRunResult(returncode=proc.returncode, stdout=stdout, suggestions=suggestions)
 
 
 @pytest.fixture(scope="session")
@@ -220,3 +258,36 @@ def golden_agents_rereadme():
         with open(REREADME_AGENTS_GOLDEN_PATH) as f:
             return f.read()
     return None
+
+
+# --- CI mode fixtures ---
+
+
+@pytest.fixture(scope="session")
+def ci_run_pr11() -> Generator[CiRunResult, None, None]:
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr11-{timestamp}.md"
+    result = run_ci("3ea3dcf", "bd31fbc", output_path)
+    yield result
+    if output_path.exists():
+        output_path.unlink()
+
+
+@pytest.fixture(scope="session")
+def ci_run_pr14() -> Generator[CiRunResult, None, None]:
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr14-{timestamp}.md"
+    result = run_ci("ae761da", "8a10c7a", output_path)
+    yield result
+    if output_path.exists():
+        output_path.unlink()
+
+
+@pytest.fixture(scope="session")
+def ci_run_pr15() -> Generator[CiRunResult, None, None]:
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr15-{timestamp}.md"
+    result = run_ci("8a10c7a", "cfa1d4c", output_path)
+    yield result
+    if output_path.exists():
+        output_path.unlink()
