@@ -23,6 +23,7 @@ const GENERATE_AGENTS = Boolean(args.agents)
 const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
 const SKIP_BACKUP = Boolean(args['no-backup'])
 const CI_MODE = Boolean(args.ci)
+const APPLY_MODE = Boolean(args.apply)
 const BASE_REF = typeof args['base-ref'] === 'string' ? args['base-ref'] : 'main'
 const HEAD_REF = typeof args['head-ref'] === 'string' ? args['head-ref'] : 'HEAD'
 const CI_OUTPUT = typeof args['ci-output'] === 'string' ? args['ci-output'] : 'README-suggestions.md'
@@ -124,9 +125,53 @@ export async function runCiWorkflow(): Promise<void> {
     await fs.writeFile(CI_OUTPUT, renderSuggestions(result.suggestions!, updatedReadme).trim() + '\n')
     log.detail(`${CI_OUTPUT} written`)
 
+    if (APPLY_MODE && updatedReadme) {
+      log.step('Applying patches to README.md')
+      if (!SKIP_BACKUP && await fs.pathExists('README.md')) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        await fs.copy('README.md', `README.backup-${timestamp}.md`)
+      }
+      await fs.writeFile('README.md', updatedReadme.trim() + '\n')
+      log.detail(`README.md updated with ${result.suggestions!.changes.length} change(s)`)
+    }
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     log.outro(`Done in ${elapsed}s — review ${CI_OUTPUT}`)
 
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    log.error(errorMessage)
+    process.exit(1)
+  }
+}
+
+export async function runApplyWorkflow(): Promise<void> {
+  const startTime = Date.now()
+  try {
+    log.intro('rereadme --apply')
+
+    if (!await fs.pathExists(CI_OUTPUT)) {
+      log.error(`No suggestions file found: ${CI_OUTPUT}\n  Run 'rereadme --ci' first`)
+      process.exit(1)
+    }
+
+    const suggestionsContent = String(await fs.readFile(CI_OUTPUT, 'utf-8'))
+    const match = suggestionsContent.match(/``````markdown\n([\s\S]*?)\n``````/)
+    if (!match) {
+      log.error(`Could not extract updated README from ${CI_OUTPUT}`)
+      process.exit(1)
+    }
+    const updatedReadme = match[1]
+
+    log.step('Writing README.md')
+    if (!SKIP_BACKUP && await fs.pathExists('README.md')) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      await fs.copy('README.md', `README.backup-${timestamp}.md`)
+    }
+    await fs.writeFile('README.md', updatedReadme.trim() + '\n')
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+    log.outro(`Done in ${elapsed}s — README.md updated`)
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     log.error(errorMessage)
@@ -307,6 +352,7 @@ ${pc.yellow('Options:')}
   --base-ref REF            Base ref for CI diff (default: main)
   --head-ref REF            Head ref for CI diff (default: HEAD)
   --ci-output FILE          Output suggestions to specified file (default: README-suggestions.md)
+  --apply                   Apply suggestions to README.md; with --ci, also applies after analysis
 
 ${pc.yellow('Environment Variables:')}
   OPENAI_API_KEY  Required - Your OpenAI API key
@@ -332,6 +378,9 @@ ${pc.yellow('Examples:')}
   rereadme --ci                               # CI mode: analyze diff against main
   rereadme --ci --base-ref origin/main        # CI mode with explicit base ref
   rereadme --ci --verbose                     # CI mode with agent trace output
+  rereadme --ci --apply                       # CI mode: analyze diff and apply patches in-place
+  rereadme --apply                            # Apply existing README-suggestions.md to README.md
+  rereadme --apply --ci-output custom.md      # Apply from a custom suggestions file
 `)
 }
 
@@ -350,6 +399,11 @@ async function main(): Promise<void> {
 
   if (CI_MODE) {
     await runCiWorkflow()
+    return
+  }
+
+  if (APPLY_MODE) {
+    await runApplyWorkflow()
     return
   }
 
