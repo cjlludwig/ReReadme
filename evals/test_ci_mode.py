@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 from deepeval import assert_test  # type: ignore[attr-defined]
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from conftest import CiRunResult
+from conftest import REPO_ROOT, CiRunResult
 from metrics.types import GEVAL_MODEL
 
 CI_CASES = [
@@ -18,7 +19,8 @@ CI_CASES = [
         "fixture": "ci_run_pr11",
         "expected_significant": True,
         "expected_signal": "high",
-        "keywords": ["--ci", "--base-ref", "usage"],
+        "expected_alert": "CAUTION",
+        "keywords": ["--ci", "usage"],
         "geval_criteria": (
             "This is a README update suggestions document generated for a diff that introduced new CLI flags "
             "(--ci, --base-ref, --head-ref, --ci-output). "
@@ -35,6 +37,7 @@ CI_CASES = [
         "fixture": "ci_run_pr14",
         "expected_significant": True,
         "expected_signal": "medium",
+        "expected_alert": "WARNING",
         "keywords": ["action"],
         "geval_criteria": (
             "This is a README update suggestions document generated for a diff that introduced a reusable GitHub Action. "
@@ -51,10 +54,11 @@ CI_CASES = [
         "fixture": "ci_run_pr15",
         "expected_significant": False,
         "expected_signal": None,
+        "expected_alert": None,
         "keywords": [],
         "geval_criteria": (
             "This is stdout from a CI mode run where no README update file was produced (the correct outcome). "
-            "The diff contained internal test reorganization and TypeScript module extraction with no new CLI flags "
+            "The diff contained internal test reorganization and module extraction with no new CLI flags "
             "or user-visible behavior changes. "
             "Evaluate whether the tool's reasoning is appropriate: "
             "(1) Does the stdout indicate a non-significant or low-signal classification? "
@@ -104,6 +108,60 @@ def test_output_format(case: dict, request: pytest.FixtureRequest) -> None:
         f"Expected GitHub alert block in suggestions for {case['id']}. "
         f"Got: {result.suggestions[:300]}"
     )
+
+
+@pytest.mark.parametrize("case", CI_CASES, ids=[str(c["id"]) for c in CI_CASES])
+def test_alert_matches_signal(case: dict, request: pytest.FixtureRequest) -> None:
+    if not case["expected_significant"]:
+        pytest.skip("No output file expected for non-significant diff")
+    result: CiRunResult = request.getfixturevalue(case["fixture"])
+    assert result.suggestions is not None
+    expected = str(case["expected_alert"])
+    assert f"[!{expected}]" in result.suggestions, (
+        f"Expected [!{expected}] alert in suggestions for {case['id']}. "
+        f"Got: {result.suggestions[:300]}"
+    )
+
+
+@pytest.mark.parametrize("case", CI_CASES, ids=[str(c["id"]) for c in CI_CASES])
+def test_diff_block_present(case: dict, request: pytest.FixtureRequest) -> None:
+    if not case["expected_significant"]:
+        pytest.skip("No output file expected for non-significant diff")
+    result: CiRunResult = request.getfixturevalue(case["fixture"])
+    assert result.suggestions is not None
+    assert "```diff" in result.suggestions, (
+        f"Expected a ```diff block in suggestions for {case['id']}."
+    )
+    assert re.search(r"^- .+", result.suggestions, re.MULTILINE), (
+        f"Expected '- ' removal line in diff block for {case['id']}."
+    )
+    assert re.search(r"^\+ .+", result.suggestions, re.MULTILINE), (
+        f"Expected '+ ' addition line in diff block for {case['id']}."
+    )
+
+
+@pytest.mark.parametrize("case", CI_CASES, ids=[str(c["id"]) for c in CI_CASES])
+def test_section_heading_exists(case: dict, request: pytest.FixtureRequest) -> None:
+    if not case["expected_significant"]:
+        pytest.skip("No output file expected for non-significant diff")
+    result: CiRunResult = request.getfixturevalue(case["fixture"])
+    assert result.suggestions is not None
+    readme_path = Path(REPO_ROOT) / "README.md"
+    if not readme_path.exists():
+        pytest.skip("README.md not found in repo root")
+    readme = readme_path.read_text(encoding="utf-8")
+    readme_headings = {
+        line.lstrip("#").strip().lower()
+        for line in readme.splitlines()
+        if line.startswith("#")
+    }
+    section_names = re.findall(r"^\*\*Section:\*\* (.+)$", result.suggestions, re.MULTILINE)
+    assert section_names, f"No **Section:** lines found in suggestions for {case['id']}."
+    for name in section_names:
+        assert name.strip().lower() in readme_headings, (
+            f"Section '{name}' not found as a heading in README.md for {case['id']}. "
+            f"Available headings: {sorted(readme_headings)}"
+        )
 
 
 @pytest.mark.parametrize("case", CI_CASES, ids=[str(c["id"]) for c in CI_CASES])

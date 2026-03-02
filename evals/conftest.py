@@ -267,27 +267,18 @@ def golden_agents_rereadme():
 def ci_run_pr11() -> Generator[CiRunResult, None, None]:
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr11-{timestamp}.md"
-    result = run_ci("3ea3dcf", "bd31fbc", output_path)
-    yield result
-    if output_path.exists():
-        output_path.unlink()
+    yield run_ci("3ea3dcf", "bd31fbc", output_path)
 
 
 @pytest.fixture(scope="session")
 def ci_run_pr14() -> Generator[CiRunResult, None, None]:
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr14-{timestamp}.md"
-    result = run_ci("ae761da", "8a10c7a", output_path)
-    yield result
-    if output_path.exists():
-        output_path.unlink()
+    yield run_ci("ae761da", "8a10c7a", output_path)
 
 
 @pytest.fixture(scope="session")
 def ci_run_pr15() -> Generator[CiRunResult, None, None]:
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr15-{timestamp}.md"
-    result = run_ci("8a10c7a", "cfa1d4c", output_path)
-    yield result
-    if output_path.exists():
-        output_path.unlink()
+    yield run_ci("8a10c7a", "cfa1d4c", output_path)
