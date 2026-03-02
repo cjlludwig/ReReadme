@@ -9,7 +9,7 @@ inputs:
     description: Base branch to compare against. Defaults to origin/main. Variants may be origin/master, origin/prod, etc.
   verbose:
     default: "false"
-    description: Enable verbose agent trace output for debugging.
+    description: Enable verbose agent trace output for debugging. Options 'true' || 'false'
   model:
     description: Override the default model (e.g. gpt-4o). Omit to use the built-in default.
 branding:

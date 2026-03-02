@@ -65,10 +65,13 @@ MEDIUM signal (evaluate carefully — only significant=true if user-visible beha
 - Significant behavior changes visible to end users
 
 LOW signal (significant=false):
-- Test-only changes
+- Test-only changes (new tests, test reorganization, test coverage improvements, test infrastructure)
 - CI/CD configuration changes
 - Dependency version bumps with no API change
-- Internal refactors with no public API change
+- Internal refactors with no public API change, including:
+  - Extracting internal modules/utilities not exposed as CLI flags or user-facing APIs
+  - Moving code between files with no change to CLI flags, env vars, or public behavior
+- Type annotation or type system fixes with no runtime behavior change (e.g. TypeScript types, Python type hints)
 - Documentation-only changes (already in README)
 - Code style / formatting changes
 
