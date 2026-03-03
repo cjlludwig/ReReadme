@@ -34,6 +34,7 @@ def run_ci(base_ref: str, head_ref: str, output_path: Path) -> CiRunResult:
         [
             "npx", "tsx", "script.ts",
             "--ci",
+            "--verbose",
             "--base-ref", base_ref,
             "--head-ref", head_ref,
             "--ci-output", str(output_path),
@@ -282,3 +283,10 @@ def ci_run_pr15() -> Generator[CiRunResult, None, None]:
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr15-{timestamp}.md"
     yield run_ci("8a10c7a", "cfa1d4c", output_path)
+
+
+@pytest.fixture(scope="session")
+def ci_run_pr17() -> Generator[CiRunResult, None, None]:
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    output_path = Path(REPO_ROOT) / "evals" / "results" / f"ci-pr17-{timestamp}.md"
+    yield run_ci("5513e67", "5bbc138", output_path)

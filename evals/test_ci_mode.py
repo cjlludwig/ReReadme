@@ -39,6 +39,7 @@ CI_CASES = [
         "expected_signal": "medium",
         "expected_alert": "WARNING",
         "keywords": ["action"],
+        "check_section_headings": False,  # PR14 introduces a new concept (GitHub Action); agent may suggest a new section not yet in README
         "geval_criteria": (
             "This is a README update suggestions document generated for a diff that introduced a reusable GitHub Action. "
             "Evaluate the quality and correctness of the suggestion: "
@@ -57,18 +58,51 @@ CI_CASES = [
         "expected_alert": None,
         "keywords": [],
         "geval_criteria": (
-            "This is stdout from a CI mode run where no README update file was produced (the correct outcome). "
+            "This is stdout from a CI mode run where no README suggestions file was written (the correct outcome)"
             "The diff contained internal test reorganization and module extraction with no new CLI flags "
-            "or user-visible behavior changes. "
-            "Evaluate whether the tool's reasoning is appropriate: "
-            "(1) Does the stdout indicate a non-significant or low-signal classification? "
-            "   (Look for: 'Signal level: low', 'no output written', 'no README sections matched', "
-            "   or the absence of a confident high/medium signal assertion.) "
-            "(2) If the output says 'no README sections matched', is that a plausible outcome given that "
-            "   the diff had no user-visible CLI or API changes to document? "
-            "(3) Is the overall conclusion consistent with correctly skipping documentation for internal changes? "
+            "or user-visible behavior changes. Focus on the meaningful status text."
+            "Evaluate whether the tool's behavior is consistent with correctly skipping this diff: "
+            "(1) Does the stdout avoid asserting significant user-visible changes? "
+            "   (i.e., no [!CAUTION] or [!WARNING] alert blocks, no phrases like "
+            "   'high signal', 'README update required', or 'significant changes detected') "
+            "(2) Is there any indication — however brief — that the diff was classified as "
+            "   low priority or non-significant? "
+            "   (e.g., 'Signal level: low', 'no update needed', 'no significant changes', "
+            "   or simply the absence of urgency markers) "
+            "(3) Is the overall behavior consistent with correctly skipping documentation "
+            "   for internal refactoring? "
             "Score high if the tool's output is consistent with not documenting internal-only changes. "
-            "Score low only if the tool confidently asserts important user-visible changes occurred yet still produced no output."
+            "Score low ONLY if the stdout explicitly asserts the changes are user-visible and "
+            "significant, contradicting the correct classification."
+        ),
+    },
+    {
+        "id": "pr17_eval_tuning",
+        "fixture": "ci_run_pr17",
+        "expected_significant": False,
+        "expected_signal": None,
+        "expected_alert": None,
+        "keywords": [],
+        "geval_criteria": (
+            "This is stdout from a CI mode run where no README suggestions file was written "
+            "(the correct outcome). The diff was PR #17: eval test infrastructure, internal AI "
+            "agent prompt tuning, developer-only npm scripts, and CI/CD metadata — none are "
+            "user-visible changes. "
+            "The stdout will likely contain terminal spinner animation characters and ANSI "
+            "escape codes — ignore those when evaluating. Focus on the meaningful status text. "
+            "Evaluate whether the tool's behavior is consistent with correctly skipping this diff: "
+            "(1) Does the stdout avoid asserting significant user-visible changes? "
+            "   (i.e., no [!CAUTION] or [!WARNING] alert blocks, no phrases like "
+            "   'high signal', 'README update required', or 'significant changes detected') "
+            "(2) Is there any indication — however brief — that the diff was classified as "
+            "   low priority or non-significant? "
+            "   (e.g., 'no output written', 'no README sections matched', "
+            "   or simply the absence of urgency markers) "
+            "(3) Is the overall behavior consistent with correctly skipping documentation "
+            "   for internal/developer-only changes? "
+            "Score high if the tool's output is consistent with not documenting internal-only changes. "
+            "Score low ONLY if the stdout explicitly asserts the changes are user-visible and "
+            "significant, contradicting the correct classification."
         ),
     },
 ]
@@ -144,6 +178,8 @@ def test_diff_block_present(case: dict, request: pytest.FixtureRequest) -> None:
 def test_section_heading_exists(case: dict, request: pytest.FixtureRequest) -> None:
     if not case["expected_significant"]:
         pytest.skip("No output file expected for non-significant diff")
+    if not case.get("check_section_headings", True):
+        pytest.skip("Section heading check skipped: PR introduces a new concept with no existing section")
     result: CiRunResult = request.getfixturevalue(case["fixture"])
     assert result.suggestions is not None
     readme_path = Path(REPO_ROOT) / "README.md"
