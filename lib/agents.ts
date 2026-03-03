@@ -1,7 +1,7 @@
 import { Agent } from '@openai/agents';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { z } from 'zod';
-import { listDirectory, readFile, searchCode, getStructure, diffTools } from './tools.js';
+import { listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles, diffTools } from './tools.js';
 
 export const DiffAnalysisSchema = z.object({
   significant: z.boolean().describe('Whether this diff warrants a README update'),
@@ -187,19 +187,23 @@ Additional rules:
     model,
     instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a repository researcher. Your job is to explore the repository structure AND analyze file contents in a single pass. Work in two phases:
 
-**Phase 1 — Explore structure**
-Navigate the repository and identify key files:
-- package.json, Cargo.toml, pyproject.toml, go.mod, or other manifest files
+**Phase 1 — Map the repo structure**
+Call get_file_tree once with ["**/*"] to get the full file list. You now have the complete repo map — do NOT make further list_directory calls.
+
+From the file list, identify key files to read:
+- Manifest files (package.json, Cargo.toml, pyproject.toml, go.mod, etc.)
 - Entry points and main source files
-- Configuration files (tsconfig, webpack, docker, CI/CD)
-- Container/dev environment configs (Dockerfile, docker-compose.yml, .devcontainer/)
-- Test files and test configuration
-- Documentation files
+- Configuration files (tsconfig, Dockerfile, docker-compose, CI/CD, .devcontainer/)
+- Documentation files (README, docs/)
 
-Start by listing the root directory, then explore important subdirectories including hidden directories like .devcontainer/.
+Skip test files, lock files, and generated output — they don't contribute README content.
 
-**Phase 2 — Extract content**
-Read the files you discovered and extract facts for the README. The template below is the single source of truth for what sections exist, what each section needs, and how the output will be organized. Each template section contains blockquote guidance describing the required content — use that as your checklist.
+**Phase 2 — Read key files in batches**
+Use read_files to read 4–6 related files per call (e.g., manifest + entry points together, then config files together). Use read_file only for single follow-up lookups. Use get_structure instead of read_files for large source files when you only need exported signatures.
+
+Target ≤ 4 read_files calls total. Stop reading once you have enough to populate every template section — do not read files for completeness alone.
+
+The template below is the single source of truth for what sections exist, what each section needs, and how the output will be organized. Each template section contains blockquote guidance describing the required content — use that as your checklist.
 
 Do NOT invent your own sections or headings. Organize your findings under the exact headings from the template.
 
@@ -209,7 +213,7 @@ README Template:
 ${readmeTemplate}
 
 When done, output your findings as a structured technical summary using the exact headings from the template above. Under each heading, list the specific facts you found and where you found them (file paths). Do not fabricate details — only report what you actually read.`,
-    tools: [listDirectory, readFile, searchCode, getStructure],
+    tools: [getFileTree, readFiles, listDirectory, readFile, searchCode, getStructure],
     handoffDescription:
       'Explore repository structure and analyze file contents',
   });

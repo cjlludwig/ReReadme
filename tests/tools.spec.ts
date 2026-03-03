@@ -146,6 +146,57 @@ describe("git_diff", () => {
     })
 })
 
+describe("get_file_tree", () => {
+    it("should return known files with default pattern", async () => {
+        const result = await invokeTool(tools.getFileTree, { patterns: ['**/*'] })
+        expect(result).toContain('package.json')
+        expect(result).toContain('lib/tools.ts')
+    })
+
+    it("should exclude files matching exclude patterns", async () => {
+        const result = await invokeTool(tools.getFileTree, { patterns: ['**/*', '!**/*.spec.ts'] })
+        expect(result).not.toContain('.spec.ts')
+        expect(result).toContain('lib/tools.ts')
+    })
+
+    it("should return 'No files matched.' for unmatched pattern", async () => {
+        const result = await invokeTool(tools.getFileTree, { patterns: ['**/*.neverexists'] })
+        expect(result).toBe('No files matched.')
+    })
+})
+
+describe("read_files", () => {
+    it("should return labeled content for multiple paths", async () => {
+        const result = await invokeTool(tools.readFiles, { paths: ['package.json', 'lib/tools.ts'] })
+        expect(result).toContain('### package.json')
+        expect(result).toContain('### lib/tools.ts')
+        expect(result).toContain('"name": "rereadme"')
+    })
+
+    it("should return access denied for gitignored paths", async () => {
+        const gitignored = 'test-secret.backup-gitignore-rf'
+        nodeFs.writeFileSync(gitignored, 'SECRET=1\n')
+        try {
+            const result = await invokeTool(tools.readFiles, { paths: [gitignored, 'package.json'] })
+            expect(result).toContain('[Access denied: gitignored]')
+            expect(result).toContain('### package.json')
+        } finally {
+            if (nodeFs.existsSync(gitignored)) nodeFs.unlinkSync(gitignored)
+        }
+    })
+
+    it("should return error label for nonexistent paths", async () => {
+        const result = await invokeTool(tools.readFiles, { paths: ['nonexistent-file-xyz.ts', 'package.json'] })
+        expect(result).toContain('[Error: file not found or unreadable]')
+        expect(result).toContain('### package.json')
+    })
+
+    it("should truncate files exceeding maxLinesEach", async () => {
+        const result = await invokeTool(tools.readFiles, { paths: ['lib/tools.ts'], maxLinesEach: 5 })
+        expect(result).toContain('[... truncated at 5 lines]')
+    })
+})
+
 describe("diffTools export", () => {
     it("should export diffTools array", async () => {
         expect(tools.diffTools).toBeDefined()

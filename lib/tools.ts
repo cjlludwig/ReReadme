@@ -161,7 +161,73 @@ export const getStructure = tool({
   },
 });
 
-export const allTools = [listDirectory, readFile, searchCode, getStructure];
+export const getFileTree = tool({
+  name: 'get_file_tree',
+  description:
+    'Get a flat list of all repo files matching glob patterns. Faster than repeated list_directory calls. ' +
+    'Use exclude patterns (prefix with !) to filter noise, e.g. ["**/*", "!**/*.spec.ts", "!tests/**"]. ' +
+    'Returns one relative path per line.',
+  parameters: z.object({
+    patterns: z
+      .array(z.string())
+      .default(['**/*'])
+      .describe('Globby include/exclude patterns. Prefix with ! to exclude.'),
+  }),
+  execute: async (input) => {
+    const files = await globby(input.patterns, {
+      cwd: ROOT,
+      gitignore: true,
+      dot: true,
+      ignore: ['.git/**', 'node_modules/**'],
+    });
+    return files.length > 0 ? files.join('\n') : 'No files matched.';
+  },
+});
+
+export const readFiles = tool({
+  name: 'read_files',
+  description:
+    'Read multiple files at once. Prefer this over repeated read_file calls when you know which files you need. ' +
+    "Returns each file's content labeled with its path. Max 8 files per call.",
+  parameters: z.object({
+    paths: z
+      .array(z.string())
+      .max(8)
+      .describe('Relative paths from repo root'),
+    maxLinesEach: z
+      .number()
+      .max(500)
+      .default(300)
+      .describe('Max lines to return per file'),
+  }),
+  execute: async (input) => {
+    const isIgnored = await isGitIgnored({ cwd: ROOT });
+    const results: string[] = [];
+    for (const p of input.paths) {
+      const filePath = safePath(p);
+      if (isIgnored(path.relative(ROOT, filePath))) {
+        results.push(`### ${p}\n[Access denied: gitignored]`);
+        continue;
+      }
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const lines = content.split('\n').slice(0, input.maxLinesEach);
+        const truncated = lines.length < content.split('\n').length;
+        const header = `### ${p}`;
+        const body = lines.join('\n');
+        const footer = truncated
+          ? `\n[... truncated at ${input.maxLinesEach} lines]`
+          : '';
+        results.push(`${header}\n${body}${footer}`);
+      } catch {
+        results.push(`### ${p}\n[Error: file not found or unreadable]`);
+      }
+    }
+    return results.join('\n\n---\n\n');
+  },
+});
+
+export const allTools = [listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles];
 
 export const gitDiffStat = tool({
   name: 'git_diff_stat',
