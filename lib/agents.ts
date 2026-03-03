@@ -63,6 +63,8 @@ HIGH signal (always significant=true):
 MEDIUM signal (evaluate carefully — only significant=true if user-visible behavior changed):
 - New exported public API
 - Significant behavior changes visible to end users
+- Net-new user-facing capabilities that do not map to any existing README section — the change
+  is significant but the user must decide if and where to document it, so it is not urgent
 
 LOW signal (significant=false):
 - Test-only changes (new tests, test reorganization, test coverage improvements, test infrastructure)
@@ -97,6 +99,7 @@ Only mark significant=true when there is clear evidence of user-impacting change
     instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a surgical README editor. You receive a diff analysis and the current README content. Produce targeted, minimal suggestions for updating the README.
 
 Rules:
+- Before writing any suggestion, call read_file on README.md to obtain the current content and collect every heading that exists (lines beginning with #). sectionHeading must be the exact text of an existing heading — do not invent headings that are not in the file. If an affectedReadmeSections entry does not match any real heading, map it to the nearest parent section that does exist.
 - Only produce changes for sections listed in affectedReadmeSections
 - Only document facts listed in highSignalChanges
 - currentExcerpt must be verbatim text from the README, 1–5 lines
