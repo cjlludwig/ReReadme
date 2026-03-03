@@ -8,8 +8,9 @@
 
 > [!WARNING]
 > If you're not comfortable or allowed to leverage Dev AI tools on your codebase this may not be the right tool for you.
-> This tool allows OpenAI Agents to inspect relevant files within a repo to determine repo details.
-> Check compliance policies before usage.
+> This tool allows OpenAI Agents to inspect Git tracked files within a repo to determine repo details.
+>
+> See [Security](docs/security.md) for access protections and [Observability](docs/observability.md) for agent trace visibility.
 
 The rereadme CLI tool automatically refreshes README.md files by analyzing the repository and processing findings with AI. It uses a multi-agent architecture (Researcher → DetailFetcher → TemplateEnforcer) powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
 
@@ -58,6 +59,8 @@ npm run check
 ```
 
 ## Usage
+
+> For real-world usage scenarios, see [Workflows](docs/workflows.md).
 
 ### CLI Tool Usage (Global Installation)
 
@@ -119,6 +122,8 @@ npm run help                       # Show help
 
 ### Custom Templates
 
+> For template design guidance and conventions, see [Templates](docs/templates.md).
+
 You can supply your own markdown template with `--template FILE` (for README) or `--agents-template FILE` (for AGENTS.md, requires `--agents`).
 
 Template requirements:
@@ -166,11 +171,19 @@ Additional implementation details:
 
 ## Architecture
 
+> For local setup, development workflow, and contribution standards, see [Development](docs/development.md).
+
 The tool is built using:
 
 - **Google ZX** - Node.js CLI script framework for shell operations
 - **OpenAI Agents SDK** - AI processing of documentation content
 - **TypeScript** - Type-safe development with modern JavaScript features
+
+## Quality
+
+LLMs are inherently non-deterministic, so rereadme takes a two-layer approach to agent quality. Tool calls are tested explicitly in the Jest unit suite to assert allowed filesystem actions and path boundaries — the deterministic, security-critical behavior that must hold on every run. General output quality — structure, accuracy, completeness — is validated through a DeepEval eval framework that runs rereadme against real dataset repos and compares output against golden READMEs using both deterministic checks and an LLM-as-judge metric.
+
+See [evals/README.md](evals/README.md) for setup, metrics, and the golden README workflow.
 
 ## Help
 
