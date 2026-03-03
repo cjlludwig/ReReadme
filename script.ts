@@ -3,7 +3,7 @@
 // rereadme - CLI tool to automatically update README files
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
-import { runAgentWorkflow, runDiffWorkflow } from './lib/runner.js'
+import { runAgentWorkflow, runDiffWorkflow, type WorkflowStats } from './lib/runner.js'
 import { renderSuggestions, applyPatches } from './lib/readme-utils.js'
 import { validateTemplate } from './lib/validate.js'
 import * as log from './lib/logger.js'
@@ -29,6 +29,7 @@ const HEAD_REF = typeof args['head-ref'] === 'string' ? args['head-ref'] : 'HEAD
 const CI_OUTPUT = typeof args['ci-output'] === 'string' ? args['ci-output'] : 'README-suggestions.md'
 const CUSTOM_README_TEMPLATE = typeof args.template === 'string' ? args.template : undefined
 const CUSTOM_AGENTS_TEMPLATE = typeof args['agents-template'] === 'string' ? args['agents-template'] : undefined
+const STATS_OUTPUT = typeof args['stats-output'] === 'string' ? args['stats-output'] : undefined
 
 async function checkGitRepo(): Promise<boolean> {
   try {
@@ -241,7 +242,7 @@ export async function updateReadme(content: string): Promise<void> {
 
 export async function formatReadme(): Promise<void> {
   log.detail(`Formatting ${OUTPUT_FILE} with markdownlint`)
-  const fixResult = await $({ nothrow: true })`markdownlint --fix ${OUTPUT_FILE}`
+  const fixResult = await $({ nothrow: true })`markdownlint --fix --disable MD013 -- ${OUTPUT_FILE}`
   if (fixResult.exitCode === 0) {
     log.detail(`${OUTPUT_FILE} formatted`)
   } else {
@@ -292,6 +293,7 @@ export async function runWorkflow(): Promise<void> {
     log.setSpinner(spinner)
     let readmeContent: string
     let agentsContent: string | undefined
+    let workflowStats: WorkflowStats | undefined
     try {
       const result = await runAgentWorkflow({
         model: OPENAI_MODEL,
@@ -299,12 +301,19 @@ export async function runWorkflow(): Promise<void> {
       })
       readmeContent = result.readme
       agentsContent = result.agents
+      workflowStats = result.stats
       log.setSpinner(null)
       spinner.stop('Agent workflow complete')
     } catch (e) {
       log.setSpinner(null)
       spinner.stop('Agent workflow failed')
       throw e
+    }
+
+    // Write stats JSON if requested
+    if (STATS_OUTPUT && workflowStats !== undefined) {
+      await fs.writeFile(STATS_OUTPUT, JSON.stringify(workflowStats, null, 2) + '\n')
+      log.detail(`Stats written to ${STATS_OUTPUT}`)
     }
 
     // Write README
@@ -331,7 +340,7 @@ export async function runWorkflow(): Promise<void> {
       log.step(`Writing ${AGENTS_OUTPUT_FILE}`)
       await fs.writeFile(AGENTS_OUTPUT_FILE, agentsContent.trim() + '\n')
       log.detail(`${AGENTS_OUTPUT_FILE} written`)
-      const agentsFix = await $({ nothrow: true })`markdownlint --fix ${AGENTS_OUTPUT_FILE}`
+      const agentsFix = await $({ nothrow: true })`markdownlint --fix --disable MD013 -- ${AGENTS_OUTPUT_FILE}`
       if (agentsFix.exitCode !== 0) {
         log.warn(`Some markdown issues in ${AGENTS_OUTPUT_FILE} may need manual fixing`)
       }

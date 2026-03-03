@@ -4,6 +4,12 @@ import { stripFences } from './readme-utils.js';
 import * as fs from 'node:fs';
 import * as log from './logger.js';
 
+export interface WorkflowStats {
+  toolCallCount: number;
+  toolCallsByAgent: Record<string, number>;
+  toolCallsByTool: Record<string, number>;
+}
+
 function summarizeToolCall(name: string, argsJson: string): string {
   try {
     const args = JSON.parse(argsJson) as Record<string, unknown>;
@@ -23,12 +29,15 @@ function summarizeToolCall(name: string, argsJson: string): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function attachToolLogger(agent: Agent<unknown, any>): void {
+function attachToolLogger(agent: Agent<unknown, any>, agentName: string, stats: WorkflowStats): void {
   agent.on('agent_tool_start', (_ctx, _tool, details) => {
     const tc = details.toolCall;
     if (tc.type !== 'function_call') return;
     const summary = summarizeToolCall(tc.name, tc.arguments);
     log.toolCall(`→ ${tc.name}${summary ? `  ${summary}` : ''}`);
+    stats.toolCallCount += 1;
+    stats.toolCallsByAgent[agentName] = (stats.toolCallsByAgent[agentName] ?? 0) + 1;
+    stats.toolCallsByTool[tc.name] = (stats.toolCallsByTool[tc.name] ?? 0) + 1;
   });
 }
 
@@ -53,8 +62,9 @@ export async function runDiffWorkflow(
   const { model, inputFile, baseRef, headRef } = options;
 
   const { diffAnalyzer, readmePatcher } = createDiffAgents(model);
-  attachToolLogger(diffAnalyzer);
-  attachToolLogger(readmePatcher);
+  const _diffStats: WorkflowStats = { toolCallCount: 0, toolCallsByAgent: {}, toolCallsByTool: {} };
+  attachToolLogger(diffAnalyzer, 'DiffAnalyzer', _diffStats);
+  attachToolLogger(readmePatcher, 'ReadmePatcher', _diffStats);
 
   return withTrace('ReReadme Diff Workflow', async () => {
     // Step 1: DiffAnalyzer classifies the changes
@@ -110,12 +120,13 @@ export interface AgentWorkflowOptions {
 
 export async function runAgentWorkflow(
   options: AgentWorkflowOptions,
-): Promise<{ readme: string; agents?: string }> {
+): Promise<{ readme: string; agents?: string; stats: WorkflowStats }> {
   const { model, readmeTemplate, agentsTemplate } = options;
 
   const { researcher, templateEnforcer, detailFetcher, agentsDocWriter } = createAgents(model, readmeTemplate, agentsTemplate);
-  attachToolLogger(researcher);
-  attachToolLogger(detailFetcher);
+  const stats: WorkflowStats = { toolCallCount: 0, toolCallsByAgent: {}, toolCallsByTool: {} };
+  attachToolLogger(researcher, 'Researcher', stats);
+  attachToolLogger(detailFetcher, 'DetailFetcher', stats);
 
   const initialPrompt = 'Generate a README.md for this repository.';
 
@@ -156,5 +167,6 @@ export async function runAgentWorkflow(
   return {
     readme: stripFences(readme),
     agents: agents ? stripFences(agents) : undefined,
+    stats,
   };
 }

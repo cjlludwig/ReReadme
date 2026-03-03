@@ -1,5 +1,7 @@
 .PHONY: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py test check fix
 
+-include local/Makefile
+
 lint-ts:
 	@echo "==> ESLint"
 	npx eslint
@@ -46,3 +48,4 @@ fix:
 	@echo "==> ruff --fix"
 	cd evals && uv run ruff check --fix . || true
 	@echo "==> Fixes applied"
+
