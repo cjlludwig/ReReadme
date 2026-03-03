@@ -57,12 +57,14 @@ HIGH signal (always significant=true):
 - New or changed API endpoints
 - New or changed installation steps
 - New or changed required dependencies
-- New or changed entry points
+- New or changed user-facing entry points (e.g. binary/executable definitions, new top-level commands)
 - New or changed architecture components
 
 MEDIUM signal (evaluate carefully — only significant=true if user-visible behavior changed):
 - New exported public API
 - Significant behavior changes visible to end users
+- Net-new user-facing capabilities that do not map to any existing README section — the change
+  is significant but the user must decide if and where to document it, so it is not urgent
 
 LOW signal (significant=false):
 - Test-only changes (new tests, test reorganization, test coverage improvements, test infrastructure)
@@ -74,9 +76,19 @@ LOW signal (significant=false):
 - Type annotation or type system fixes with no runtime behavior change (e.g. TypeScript types, Python type hints)
 - Documentation-only changes (already in README)
 - Code style / formatting changes
+- New or changed developer-only package scripts (e.g. eval:*, test:*, lint:*) that are not
+  in the binary/executable entry point field and have no user-facing CLI impact
+- Changes to internal AI agent instructions or system prompts where no CLI flags,
+  output schemas, or user-visible behavior change
+- New or changed internal spec, design, or planning documents (e.g. docs/specs/, docs/plans/,
+  implementation notes) — these describe developer intent and may reference existing CLI flags,
+  but are not user-impacting changes
+
+Cross-check for false positives: if you see new options / configs / interfaces referenced, validate that
+they are not just new references of pre-existing logic.
 
 Conservative default: when in doubt, lean toward significant=false.
-Only mark significant=true when there is clear evidence of user-visible changes.`,
+Only mark significant=true when there is clear evidence of user-impacting changes.`,
   });
 
   const readmePatcher = new Agent({
@@ -87,6 +99,7 @@ Only mark significant=true when there is clear evidence of user-visible changes.
     instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a surgical README editor. You receive a diff analysis and the current README content. Produce targeted, minimal suggestions for updating the README.
 
 Rules:
+- Before writing any suggestion, call read_file on README.md to obtain the current content and collect every heading that exists (lines beginning with #). sectionHeading must be the exact text of an existing heading — do not invent headings that are not in the file. If an affectedReadmeSections entry does not match any real heading, map it to the nearest parent section that does exist.
 - Only produce changes for sections listed in affectedReadmeSections
 - Only document facts listed in highSignalChanges
 - currentExcerpt must be verbatim text from the README, 1–5 lines

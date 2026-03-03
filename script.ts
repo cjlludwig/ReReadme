@@ -30,6 +30,15 @@ const CI_OUTPUT = typeof args['ci-output'] === 'string' ? args['ci-output'] : 'R
 const CUSTOM_README_TEMPLATE = typeof args.template === 'string' ? args.template : undefined
 const CUSTOM_AGENTS_TEMPLATE = typeof args['agents-template'] === 'string' ? args['agents-template'] : undefined
 
+async function checkGitRepo(): Promise<boolean> {
+  try {
+    const result = await $({ nothrow: true, quiet: true })`git rev-parse --git-dir`
+    return result.exitCode === 0
+  } catch {
+    return false
+  }
+}
+
 export async function checkDependencies(): Promise<boolean> {
   const errors: string[] = []
 
@@ -50,6 +59,12 @@ export async function checkDependencies(): Promise<boolean> {
     log.detail('OpenAI API key found')
   }
 
+  if (!await checkGitRepo()) {
+    errors.push(`Not a git repository\n${pc.dim('  Fix: run git init or navigate to a git repo')}`)
+  } else {
+    log.detail('git repository found')
+  }
+
   for (const msg of errors) { log.error(msg) }
   return errors.length === 0
 }
@@ -63,15 +78,23 @@ export async function checkCiDependencies(): Promise<boolean> {
     log.detail('OpenAI API key found')
   }
 
+  let gitAvailable = false
   try {
     const result = await $({ nothrow: true, quiet: true })`git --version`
     if (result.exitCode === 0) {
       log.detail('git found')
+      gitAvailable = true
     } else {
       errors.push(`git not found\n${pc.dim('  Fix: install git')}`)
     }
   } catch {
     errors.push(`git not found\n${pc.dim('  Fix: install git')}`)
+  }
+
+  if (gitAvailable && !await checkGitRepo()) {
+    errors.push(`Not a git repository\n${pc.dim('  Fix: run git init or navigate to a git repo')}`)
+  } else if (gitAvailable) {
+    log.detail('git repository found')
   }
 
   for (const msg of errors) { log.error(msg) }
