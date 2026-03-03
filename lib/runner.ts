@@ -1,8 +1,36 @@
-import { run, withTrace } from '@openai/agents';
+import { run, withTrace, type Agent } from '@openai/agents';
 import { createAgents, createDiffAgents, type DiffAnalysis, type ReadmeSuggestion } from './agents.js';
 import { stripFences } from './readme-utils.js';
 import * as fs from 'node:fs';
 import * as log from './logger.js';
+
+function summarizeToolCall(name: string, argsJson: string): string {
+  try {
+    const args = JSON.parse(argsJson) as Record<string, unknown>;
+    switch (name) {
+      case 'list_directory': return (args.path as string) ?? '.';
+      case 'read_file':      return args.path as string;
+      case 'search_code':    return `"${args.pattern as string}"${args.glob ? ` in ${args.glob as string}` : ''}`;
+      case 'get_structure':  return args.path as string;
+      case 'gitDiffStat':    return `${args.fromRef as string}…${(args.toRef as string | undefined) ?? 'HEAD'}`;
+      case 'gitLog':         return `${args.fromRef as string}…${(args.toRef as string | undefined) ?? 'HEAD'}`;
+      case 'gitDiff':        return `${(args.fromRef as string | undefined) ?? 'origin/main'}…${(args.toRef as string | undefined) ?? 'HEAD'}`;
+      default:               return '';
+    }
+  } catch {
+    return '';
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function attachToolLogger(agent: Agent<unknown, any>): void {
+  agent.on('agent_tool_start', (_ctx, _tool, details) => {
+    const tc = details.toolCall;
+    if (tc.type !== 'function_call') return;
+    const summary = summarizeToolCall(tc.name, tc.arguments);
+    log.toolCall(`→ ${tc.name}${summary ? `  ${summary}` : ''}`);
+  });
+}
 
 export interface DiffWorkflowOptions {
   model: string;
@@ -25,6 +53,8 @@ export async function runDiffWorkflow(
   const { model, inputFile, baseRef, headRef } = options;
 
   const { diffAnalyzer, readmePatcher } = createDiffAgents(model);
+  attachToolLogger(diffAnalyzer);
+  attachToolLogger(readmePatcher);
 
   return withTrace('ReReadme Diff Workflow', async () => {
     // Step 1: DiffAnalyzer classifies the changes
@@ -83,7 +113,9 @@ export async function runAgentWorkflow(
 ): Promise<{ readme: string; agents?: string }> {
   const { model, readmeTemplate, agentsTemplate } = options;
 
-  const { researcher, templateEnforcer, agentsDocWriter } = createAgents(model, readmeTemplate, agentsTemplate);
+  const { researcher, templateEnforcer, detailFetcher, agentsDocWriter } = createAgents(model, readmeTemplate, agentsTemplate);
+  attachToolLogger(researcher);
+  attachToolLogger(detailFetcher);
 
   const initialPrompt = 'Generate a README.md for this repository.';
 
