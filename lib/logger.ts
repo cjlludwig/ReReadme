@@ -2,8 +2,20 @@ import * as p from '@clack/prompts'
 import pc from 'picocolors'
 
 let _verbose = false
+let _spinner: ReturnType<typeof p.spinner> | null = null
 
 export function setVerbose(v: boolean): void { _verbose = v }
+export function setSpinner(s: ReturnType<typeof p.spinner> | null): void { _spinner = s }
+
+// Verbose-only — updates spinner message inline if one is active, else prints a dim step line
+export function toolCall(msg: string): void {
+  if (!_verbose) return;
+  if (_spinner) {
+    _spinner.message(pc.dim(msg));
+  } else {
+    p.log.step(pc.dim(msg));
+  }
+}
 
 // Always visible
 export const intro = p.intro

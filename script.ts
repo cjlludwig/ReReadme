@@ -112,6 +112,7 @@ export async function runCiWorkflow(): Promise<void> {
 
     const spinner = log.createSpinner()
     spinner.start(`Analyzing diff ${BASE_REF}...${HEAD_REF}`)
+    log.setSpinner(spinner)
     let result: Awaited<ReturnType<typeof runDiffWorkflow>>
     try {
       result = await runDiffWorkflow({
@@ -121,8 +122,10 @@ export async function runCiWorkflow(): Promise<void> {
         headRef: HEAD_REF,
         verbose: Boolean(args.verbose),
       })
+      log.setSpinner(null)
       spinner.stop('Diff analysis complete')
     } catch (e) {
+      log.setSpinner(null)
       spinner.stop('Diff analysis failed')
       throw e
     }
@@ -286,6 +289,7 @@ export async function runWorkflow(): Promise<void> {
     // Spinner for the only long-running async step
     const spinner = log.createSpinner()
     spinner.start('Running agent workflow')
+    log.setSpinner(spinner)
     let readmeContent: string
     let agentsContent: string | undefined
     try {
@@ -295,8 +299,10 @@ export async function runWorkflow(): Promise<void> {
       })
       readmeContent = result.readme
       agentsContent = result.agents
+      log.setSpinner(null)
       spinner.stop('Agent workflow complete')
     } catch (e) {
+      log.setSpinner(null)
       spinner.stop('Agent workflow failed')
       throw e
     }
