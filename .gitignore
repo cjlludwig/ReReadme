@@ -140,6 +140,12 @@ dist
 script.js
 README-suggestions.md
 
+**/.DS_Store
+
+# Demo assets
+evals/datasets/front-end/README.md.original
+local/
+
 # Experiments + Evals
 evals/__pycache__/
 evals/.pytest_cache/

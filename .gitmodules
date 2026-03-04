@@ -4,3 +4,6 @@
 [submodule "evals/datasets/rereadme"]
 	path = evals/datasets/rereadme
 	url = https://github.com/cjlludwig/readme-refresh
+[submodule "evals/datasets/front-end"]
+	path = evals/datasets/front-end
+	url = https://github.com/microservices-demo/front-end
