@@ -15,6 +15,10 @@ function safePath(relativePath: string): string {
   return resolved;
 }
 
+/**
+ * @deprecated Superseded by `getFileTree`, which returns the full repo file list in one call.
+ * Retained for `DetailFetcher` and backward compatibility.
+ */
 export const listDirectory = tool({
   name: 'list_directory',
   description:
@@ -41,6 +45,10 @@ export const listDirectory = tool({
   },
 });
 
+/**
+ * @deprecated Superseded by `readFiles`, which batches multiple reads into one tool call.
+ * Retained for `DetailFetcher` and backward compatibility.
+ */
 export const readFile = tool({
   name: 'read_file',
   description:

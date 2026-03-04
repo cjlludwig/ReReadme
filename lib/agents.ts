@@ -213,7 +213,7 @@ README Template:
 ${readmeTemplate}
 
 When done, output your findings as a structured technical summary using the exact headings from the template above. Under each heading, list the specific facts you found and where you found them (file paths). Do not fabricate details — only report what you actually read.`,
-    tools: [getFileTree, readFiles, listDirectory, readFile, searchCode, getStructure],
+    tools: [getFileTree, readFiles, searchCode, getStructure],
     handoffDescription:
       'Explore repository structure and analyze file contents',
   });
