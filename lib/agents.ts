@@ -131,26 +131,31 @@ Rules:
   const templateEnforcer = new Agent({
     name: 'TemplateEnforcer',
     model,
-    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a technical writer specializing in README documentation. Using the research summary provided in the conversation, generate a complete README.md file.
-
+    instructions: `You are a technical writer specializing in README documentation. Using the research summary provided in the conversation, generate a complete README.md file.
+    
 The template below is your single source of truth for structure, headers, and content guidance. Follow every instruction in it exactly.
 
 README Template:
+\`\`\`\`\`\`markdown
 ${readmeTemplate}
+\`\`\`\`\`\`
 
 Additional rules:
 - Use the exact, verbatim project name from the manifest "name" field (e.g. package.json "name") as the # title — do not humanize or rephrase it
-- You MUST emit every heading from the template using exact markdown syntax. Do not skip or merge headings. The required headings are: ## Description, ## Getting Started, ### Dependencies, ### Installation, ## Usage, ## Architecture, ## References, ## Help
+- You MUST emit every heading from the template using exact markdown syntax.
 - Only include information that was discovered by the Researcher — do not fabricate content
-- If a required section is missing specific facts (e.g. a port number, an env var, a dependency version), hand off to DetailFetcher to retrieve it. Limit yourself to 3 handoffs.
-- Use clear, concise language for a developer audience
+- If a required section is missing relevant facts (e.g. a CLI command, a required env var), attempt to retrieve using the provided tools.
+- Use clear, concise language for a developer audience.
 - DISTILL the research into polished README content. Strip all researcher artifacts: "File references:", "What I found:", source-file citations, notes-to-self, and any raw analysis scaffolding. The reader should see only clean documentation, never the research process.
 - Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
+- READMEs are written in third-person neutral for descriptions and second-person imperative for instructions, addressed to a developer evaluating or adopting the project. Ensure output is aligned.
 - Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
-    tools: [],
-    handoffs: [detailFetcher],
-    handoffDescription:
-      'Write the final README using accumulated context',
+    tools: [getFileTree, readFiles, searchCode, getStructure],
+
+    // tools: [],
+    // handoffs: [detailFetcher],
+    // handoffDescription:
+      // 'Write the final README using accumulated context',
   });
 
   // Optional Step 3: AgentsDocWriter (only when agentsTemplate is provided)
@@ -185,10 +190,13 @@ Additional rules:
   const researcher = new Agent({
     name: 'Researcher',
     model,
-    instructions: `${RECOMMENDED_PROMPT_PREFIX} You are a repository researcher. Your job is to explore the repository structure AND analyze file contents in a single pass. Work in two phases:
+    instructions: `You are a repository researcher. Your job is to explore the repository structure and analyze file contents to be used to generate documentation. 
+Use the README Template as your source of truth to determine what information to research. Iterate through each section and ensure you've collected enough information to reasonably complete.
 
-**Phase 1 — Map the repo structure**
-Call get_file_tree once with ["**/*"] to get the full file list. You now have the complete repo map — do NOT make further list_directory calls.
+Work in two phases:
+
+Phase 1 — Map the repo structure
+Call get_file_tree once with ["**/*"] to get the full file list, use this as repo map.
 
 From the file list, identify key files to read:
 - Manifest files (package.json, Cargo.toml, pyproject.toml, go.mod, etc.)
@@ -198,24 +206,24 @@ From the file list, identify key files to read:
 
 Skip test files, lock files, and generated output — they don't contribute README content.
 
-**Phase 2 — Read key files in batches**
-Use read_files to read 4–6 related files per call (e.g., manifest + entry points together, then config files together). Use read_file only for single follow-up lookups. Use get_structure instead of read_files for large source files when you only need exported signatures.
-
-Target ≤ 4 read_files calls total. Stop reading once you have enough to populate every template section — do not read files for completeness alone.
+Phase 2 — Read key files in batches
+- Use read_files to read 4–6 related files per call (e.g., manifest + entry points together, then config files together).
+- Use get_structure instead of read_files for large source files when you only need exported signatures.
+- Stop reading once you have enough to populate every template section — do not read files for completeness alone.
 
 The template below is the single source of truth for what sections exist, what each section needs, and how the output will be organized. Each template section contains blockquote guidance describing the required content — use that as your checklist.
 
 Do NOT invent your own sections or headings. Organize your findings under the exact headings from the template.
 
-One additional extraction rule not in the template: the project title must be the exact "name" field from the manifest file (package.json, Cargo.toml, etc.) — do not humanize or rephrase it.
+One additional extraction rule not in the template: the project title must be the exact "name" of the repo or underlying application.
 
 README Template:
+\`\`\`\`\`\`markdown
 ${readmeTemplate}
+\`\`\`\`\`\`
 
 When done, output your findings as a structured technical summary using the exact headings from the template above. Under each heading, list the specific facts you found and where you found them (file paths). Do not fabricate details — only report what you actually read.`,
     tools: [getFileTree, readFiles, searchCode, getStructure],
-    handoffDescription:
-      'Explore repository structure and analyze file contents',
   });
 
   return { researcher, templateEnforcer, detailFetcher, agentsDocWriter };

@@ -47,53 +47,78 @@ Example (render only what applies):
 ### Environment Variables
 
 > (Optional) If environment variables are required to run. Include optional vars that are common as well.
-> ```shell
-> export API_KEY=foo # Used for ...
-> ```
+
+<!-- 
+```shell
+export API_KEY=foo # Used for ...
+```
+-->
 
 ### Installation
 
-> Numbered steps. Each step that requires a shell command must render it in a fenced code block indented under the step, like:
->
-> 1. Step description
->
->    ```shell
->    command here
->    ```
->
-> 2. For service-start steps with no single command, use a sub-bullet instead of a code block.
->
-> If an alternative setup exists (Dev Container, Docker Compose), append it as a bold inline callout after the numbered list:
-> **Alternative (optional)**: One-line description of how to use it.
+> Numbered steps. Each step with a shell command must use a fenced code block indented with 3 spaces to stay bound to the list item. Copy this structure exactly:
+
+<!--
+1. Clone the repository
+```shell
+   git clone https://github.com/org/repo.git && cd repo
+```
+
+2. Install dependencies
+```shell
+   npm install
+```
+
+3. Configure environment
+```shell
+   cp .env.example .env
+```
+
+4. Start the service — see [Usage](#usage)
+-->
 
 ## Usage
 
-> Show how to interact with the project after it is running. Use a single fenced code block per interaction mode present in the codebase. Include only modes that apply:
+> Show how to interact with the project after it is running. Include only modes present in the codebase. If multiple modes exist, use one fenced block per mode with a bold label above each block.
 >
-> **CLI / script** — shell commands with inline comments describing each
-> **API** — curl examples ordered: start → health check → write → read
-> **Library** — minimal import + initialization + one representative call, in the language of the project
+> **CLI / script** — A realistic invocation with real flags and inline comments. Include `--help` output or link to it.
+> **API** — SDK first if one exists. Then link OpenAPI/Swagger spec as primary REST reference. Show auth stub, one representative versioned call, and one error response shape. If no spec exists, link the primary route definition file and note the absence. Use `$BASE_URL` throughout — never hardcode URLs.
+> **Library** — Minimal import + initialization + one non-obvious representative call in the project's language. Avoid trivial CRUD examples.
 >
-> Do not include modes that are not present. If multiple modes exist, use one fenced block per mode with a bold label above each block.
+> Show the minimal path from installation to a successful, verifiable output.
 
+<!-- EXAMPLE STRUCTURE — do not reproduce literally -->
 **Start**
 ```shell
-# Start — describe what this does and where it listens
-<start command>
+# replace with actual start command and describe what it starts and where it listens
+npm run start
 ```
 
 **API**
+
+API reference: [Swagger UI](http://localhost:PORT/docs) · [`openapi.yaml`](./openapi.yaml)
+<!-- If no spec found: link primary route definitions e.g. [`src/routes/widgets.ts`](./src/routes/widgets.ts) -->
 ```shell
-# Health check
-curl http://localhost:PORT/
+# Local development
+export BASE_URL=http://localhost:3000
 
-# Example write
-curl -X POST -H "Content-Type: application/json" \
-  -d '<minimal valid payload>' \
-  http://localhost:PORT/<route>
+# Deployed (environment-specific — do not hardcode)
+# export BASE_URL=https://api.internal.company.com
 
-# Example read
-curl http://localhost:PORT/<route>/<id>
+# Authenticate
+curl -X POST $BASE_URL/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"client_id": "x", "client_secret": "y"}'
+
+# Create a widget (representative write)
+curl -X POST $BASE_URL/v1/widgets \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "example", "type": "foo"}'
+
+# Error response shape
+# HTTP 422
+# {"error": "validation_failed", "fields": {"name": "required"}}
 ```
 
 **Library**
@@ -103,26 +128,24 @@ import foo from "<package-name>";
 const client = foo({ option: "value" });
 client.method(args); // describe what this does
 ```
+<!-- END EXAMPLE STRUCTURE -->
 
 ## Architecture
 
-> Choose ONE format based on project structure:
+> Only include this section if the project has non-obvious topology — multiple services, external dependencies, or a request flow not inferrable from the file structure. Omit for simple or single-concern repos.
 >
-> **Single-service or layered app** → ASCII tree in a fenced ```text block showing request/data flow top to bottom.
->   Follow the tree with a **Layer exports:** bold heading and a bulleted list of key exports per layer.
+> When included, use Mermaid `graph TD` if multiple services or external dependencies exist with explicit config or instantiation. Otherwise omit the section entirely.
 >
-> **Multi-service, event-driven, or external-dependency-heavy** → Mermaid diagram in a fenced ```mermaid block.
->   Use `graph TD` for top-down flow. Label edges with the protocol or action (e.g. HTTP, MongoDB query).
->
-> Only include components found in the codebase. Do not invent layers.
->
-> Mermaid example shape:
-> ```mermaid
-> graph TD
->   Client -->|HTTP| Gateway
->   Gateway -->|gRPC| ServiceA
->   ServiceA -->|query| DB[(Database)]
-> ```
+> Only diagram components with direct instantiation or a config entry. Do not infer from imports alone.
+
+<!-- EXAMPLE STRUCTURE — do not reproduce literally -->
+```mermaid
+graph TD
+  Client -->|HTTP| Gateway
+  Gateway -->|gRPC| ServiceA
+  ServiceA -->|query| DB[(Database)]
+```
+<!-- END EXAMPLE STRUCTURE -->
 
 ## References
 

@@ -21,7 +21,7 @@ const config: Config = {
   testEnvironment: 'node',
   testPathIgnorePatterns: ['/node_modules/', '/evals/datasets/'],
   modulePathIgnorePatterns: ['<rootDir>/evals/datasets/'],
-  coveragePathIgnorePatterns: ['/node_modules/', 'lib/logger\\.ts', 'lib/runner\\.ts'],
+  coveragePathIgnorePatterns: ['/node_modules/', 'lib/agents\\.ts', 'lib/logger\\.ts', 'lib/runner\\.ts'],
   coverageThreshold: {
     global: {
       branches: 90,

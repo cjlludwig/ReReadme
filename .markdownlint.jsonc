@@ -2,5 +2,9 @@
   // Line length is impractical for documentation prose
   "MD013": false,
   // Allow compact table style (no spaces around pipes)
-  "MD060": false
+  "MD060": false,
+  // Allow snippets next to prior line for lists
+  "MD031": false,
+  "MD032": false,
+  "MD029": false
 }

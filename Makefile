@@ -8,7 +8,7 @@ lint-ts:
 
 lint-md:
 	@echo "==> markdownlint"
-	npx markdownlint '**/*.md'
+	markdownlint '**/*.md'
 
 lint-py:
 	@echo "==> Ruff"
