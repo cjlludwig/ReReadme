@@ -237,6 +237,111 @@ def golden_readme_rereadme():
     return None
 
 
+# --- front-end dataset ---
+
+FRONT_END_DATASET_DIR = os.path.join(REPO_ROOT, "evals/datasets", "front-end")
+FRONT_END_README_GOLDEN_PATH = os.path.join(GOLDEN_DIR, "front-end-README.md")
+FRONT_END_AGENTS_GOLDEN_PATH = os.path.join(GOLDEN_DIR, "front-end-AGENTS.md")
+
+
+@pytest.fixture(scope="session")
+def _front_end_run() -> tuple[str, str]:
+    """Run rereadme --agents against front-end once, return (readme, agents)."""
+    if not os.environ.get("OPENAI_API_KEY"):
+        pytest.fail("OPENAI_API_KEY environment variable is required")
+
+    work_dir = FRONT_END_DATASET_DIR
+    output_path = os.path.join(work_dir, OUTPUT_FILENAME)
+    agents_output_path = os.path.join(work_dir, AGENTS_OUTPUT_FILENAME)
+
+    # Clean up any previous generated files
+    for p in [output_path, agents_output_path]:
+        if os.path.exists(p):
+            os.remove(p)
+
+    try:
+        result = subprocess.run(
+            [
+                "npx",
+                "tsx",
+                os.path.join(REPO_ROOT, "script.ts"),
+                "--output",
+                OUTPUT_FILENAME,
+                "--agents",
+                "--agents-output",
+                AGENTS_OUTPUT_FILENAME,
+                "--no-backup",
+            ],
+            cwd=work_dir,
+            timeout=400,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail("rereadme timed out after 400 seconds")
+
+    if result.returncode != 0:
+        pytest.fail(
+            f"rereadme failed with exit code {result.returncode}\n"
+            f"stdout: {result.stdout}\n"
+            f"stderr: {result.stderr}"
+        )
+
+    if not os.path.exists(output_path):
+        pytest.fail("rereadme did not produce README output file")
+    if not os.path.exists(agents_output_path):
+        pytest.fail("rereadme did not produce AGENTS.md output file")
+
+    with open(output_path) as f:
+        readme_content = f.read()
+    with open(agents_output_path) as f:
+        agents_content = f.read()
+
+    # Back up generated files for inspection
+    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    os.makedirs(results_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    shutil.copy2(output_path, os.path.join(results_dir, f"front-end-{timestamp}.md"))
+    shutil.copy2(agents_output_path, os.path.join(results_dir, f"front-end-AGENTS-{timestamp}.md"))
+
+    # Clean up generated files from dataset dir
+    for p in [output_path, agents_output_path]:
+        if os.path.exists(p):
+            os.remove(p)
+
+    return readme_content, agents_content
+
+
+@pytest.fixture(scope="session")
+def generated_readme_front_end(_front_end_run: tuple[str, str]) -> str:
+    readme, _ = _front_end_run
+    return readme
+
+
+@pytest.fixture(scope="session")
+def generated_agents_front_end(_front_end_run: tuple[str, str]) -> str:
+    _, agents = _front_end_run
+    return agents
+
+
+@pytest.fixture(scope="session")
+def golden_readme_front_end():
+    """Return golden front-end README content if it exists, else None."""
+    if os.path.exists(FRONT_END_README_GOLDEN_PATH):
+        with open(FRONT_END_README_GOLDEN_PATH) as f:
+            return f.read()
+    return None
+
+
+@pytest.fixture(scope="session")
+def golden_agents_front_end():
+    """Return golden front-end AGENTS.md content if it exists, else None."""
+    if os.path.exists(FRONT_END_AGENTS_GOLDEN_PATH):
+        with open(FRONT_END_AGENTS_GOLDEN_PATH) as f:
+            return f.read()
+    return None
+
+
 # --- Golden AGENTS.md fixtures ---
 
 EXPRESS_AGENTS_GOLDEN_PATH = os.path.join(GOLDEN_DIR, "express-server-AGENTS.md")

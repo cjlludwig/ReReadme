@@ -2,20 +2,16 @@ import os
 
 import pytest
 from deepeval import assert_test  # type: ignore[attr-defined]
-from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase
 
 from metrics import (
     SectionHeadersMetric,
     SectionContentMetric,
     KeywordsMetric,
+    GoldenAlignmentJudgeMetric,
     REREADME_README_KEYWORDS,
     REREADME_AGENTS_KEYWORDS,
     AGENTS_SECTIONS,
-    README_GEVAL_CRITERIA,
-    AGENTS_GEVAL_CRITERIA,
-    GEVAL_THRESHOLD,
-    GEVAL_MODEL,
 )
 
 
@@ -66,16 +62,7 @@ def test_golden_readme_similarity(generated_readme_rereadme, golden_readme_rerea
             "Review and commit it, then re-run."
         )
 
-    metric = GEval(
-        name="README Similarity",
-        criteria=README_GEVAL_CRITERIA,
-        evaluation_params=[
-            LLMTestCaseParams.ACTUAL_OUTPUT,
-            LLMTestCaseParams.EXPECTED_OUTPUT,
-        ],
-        threshold=GEVAL_THRESHOLD,
-        model=GEVAL_MODEL,
-    )
+    metric = GoldenAlignmentJudgeMetric()
 
     test_case = LLMTestCase(
         input="Generate a README for rereadme",
@@ -128,16 +115,7 @@ def test_agents_golden_similarity(
             "Review and commit it, then re-run."
         )
 
-    metric = GEval(
-        name="AGENTS.md Similarity",
-        criteria=AGENTS_GEVAL_CRITERIA,
-        evaluation_params=[
-            LLMTestCaseParams.ACTUAL_OUTPUT,
-            LLMTestCaseParams.EXPECTED_OUTPUT,
-        ],
-        threshold=GEVAL_THRESHOLD,
-        model=GEVAL_MODEL,
-    )
+    metric = GoldenAlignmentJudgeMetric()
 
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for rereadme",

@@ -1,12 +1,5 @@
 # {Project Title}
 
-<!-- TEMPLATE RULES
-- Every heading (lines starting with #) is REQUIRED and must appear verbatim, including the # level.
-- Replace blockquote guidance (lines starting with >) with real project content. Remove all blockquotes in final output.
-- Sections marked (Optional) may be omitted only if no relevant information was discovered.
-- Output ONLY the final README markdown. No preamble, no closing commentary, no wrapping code fences.
--->
-
 <!-- BADGES (Optional)
 Infer and render relevant badges immediately after the project title, before ## Description.
 Only include badges for tooling, services, or configuration actually present in the codebase.
@@ -20,26 +13,24 @@ Common sources to check:
 
 Format: shields.io static badges or official badge URLs where they exist.
 Use the repo's own metadata for labels and colors — do not invent version numbers or status.
-
-Example (render only what applies):
 -->
 
+<!-- EXAMPLE
 ![Node version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![Build](https://github.com/{org}/{repo}/actions/workflows/{workflow}.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Docker](https://img.shields.io/badge/docker-supported-blue)
+-->
 
 ## Description
 
-> One to two concise sentences: what does this project do and why does it exist?
-> Name the core technologies explicitly (e.g. Express.js, MongoDB, React).
+> A few concise sentences or paragraphs: what does this project do and why does it exist?
 
 ## Getting Started
 
 ### Dependencies
 
 > Bulleted list of prerequisites NOT installed by the package manager:
->
 > - Runtime and version (e.g. `Node.js >= 18`, `Python 3.11 via pyenv`)
 > - External services with default connection string (e.g. MongoDB on `localhost:27017`)
 > - Optional tooling on its own line, marked `(optional)` (e.g. Docker + VS Code Dev Containers extension)
@@ -48,7 +39,7 @@ Example (render only what applies):
 
 > (Optional) If environment variables are required to run. Include optional vars that are common as well.
 
-<!-- 
+<!-- EXAMPLE
 ```shell
 export API_KEY=foo # Used for ...
 ```
@@ -56,9 +47,9 @@ export API_KEY=foo # Used for ...
 
 ### Installation
 
-> Numbered steps. Each step with a shell command must use a fenced code block indented with 3 spaces to stay bound to the list item. Copy this structure exactly:
+> Numbered steps. Each step with a shell command must use a fenced code block indented.
 
-<!--
+<!-- EXAMPLE
 1. Clone the repository
 ```shell
    git clone https://github.com/org/repo.git && cd repo
@@ -163,4 +154,6 @@ graph TD
 > (Optional) Include if a LICENSE file or license identifier was found in the codebase.
 > Format: one line naming the license, followed by a link to the LICENSE file if present.
 
+<!-- EXAMPLE
 This project is licensed under the [MIT License](LICENSE).
+-->

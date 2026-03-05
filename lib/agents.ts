@@ -210,6 +210,7 @@ Phase 2 — Read key files in batches
 - Use read_files to read 4–6 related files per call (e.g., manifest + entry points together, then config files together).
 - Use get_structure instead of read_files for large source files when you only need exported signatures.
 - Stop reading once you have enough to populate every template section — do not read files for completeness alone.
+- Avoid excessive tool calls.
 
 The template below is the single source of truth for what sections exist, what each section needs, and how the output will be organized. Each template section contains blockquote guidance describing the required content — use that as your checklist.
 

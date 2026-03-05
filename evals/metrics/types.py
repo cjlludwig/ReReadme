@@ -38,20 +38,22 @@ REREADME_AGENTS_KEYWORDS = [
     "script.ts",
 ]
 
+FRONT_END_README_KEYWORDS = [
+    "npm install",
+    "npm test",
+    "Express",
+    "Redis",
+    "Docker",
+    "Prometheus",
+]
+
+FRONT_END_AGENTS_KEYWORDS = [
+    "npm test",
+    "npm start",
+    "server.js",
+    "api/",
+]
+
 AGENTS_SECTIONS = ["## Project", "## Commands"]
 
-README_GEVAL_CRITERIA = (
-    "Evaluate semantic similarity between the generated README and the golden README. "
-    "Consider section structure alignment, technical accuracy of descriptions, "
-    "and content completeness. Minor wording and structure differences should be tolerated."
-)
-
-AGENTS_GEVAL_CRITERIA = (
-    "Evaluate semantic similarity between the generated AGENTS.md and the golden AGENTS.md. "
-    "Focus on: presence of required sections (Project, Commands), accuracy of commands, "
-    "correctness of file structure, and appropriate constraints. "
-    "Minor wording differences should be tolerated."
-)
-
-GEVAL_THRESHOLD = 0.70
-GEVAL_MODEL = "gpt-5-mini"
+GEVAL_MODEL = "gpt-4o-mini"
