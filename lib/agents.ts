@@ -124,7 +124,7 @@ Rules:
 }
 
 /**
- *  Legacy 3-agent pipeline: Researcher → TemplateEnforcer ↔ DetailFetcher 
+ * Legacy 3-agent pipeline: Researcher → TemplateEnforcer ↔ DetailFetcher. No longer used.
  * @deprecated
  * */
 export function createLegacyAgents(model: string, readmeTemplate: string) {
@@ -208,7 +208,9 @@ When done, output your findings as a structured technical summary using the exac
   return { researcher, templateEnforcer, detailFetcher };
 }
 
-/** Active single-agent pipeline: ReadmeWriter → (AgentsDocWriter?) */
+/** 
+ * Active single-agent pipeline: ReadmeWriter → (AgentsDocWriter?) 
+ */
 export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
   const agentsDocWriter = agentsTemplate
     ? new Agent({

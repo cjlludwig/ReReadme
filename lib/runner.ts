@@ -128,15 +128,15 @@ export async function runAgentWorkflow(
   attachToolLogger(readmeWriter, 'ReadmeWriter', stats);
   if (agentsDocWriter) attachToolLogger(agentsDocWriter, 'AgentsDocWriter', stats);
 
-  const initialPrompt = 'Generate a README.md for this repository.';
-
+  
   const totalSteps = agentsDocWriter ? 2 : 1;
-
+  
   // Single-agent pipeline: ReadmeWriter → (AgentsDocWriter?)
   const { readme, agents } = await withTrace('ReReadme Agent Workflow', async () => {
     // Step 1: ReadmeWriter explores repo and writes the README
     log.verboseStep(totalSteps > 1 ? `Step 1/${totalSteps}: ReadmeWriter (model: ${model})` : `ReadmeWriter (model: ${model})`);
-    const step1 = await run(readmeWriter, initialPrompt, { maxTurns: 70 });
+    const initialPrompt = 'Generate a README.md for this repository.';
+    const step1 = await run(readmeWriter, initialPrompt, { maxTurns: 40 });
     if (!step1.finalOutput || step1.finalOutput.trim().length === 0) {
       throw new Error('ReadmeWriter produced no output');
     }
@@ -145,7 +145,8 @@ export async function runAgentWorkflow(
     // Step 2 (optional): AgentsDocWriter generates AGENTS.md from the same ReadmeWriter output
     if (agentsDocWriter) {
       log.verboseStep(`Step 2/${totalSteps}: AgentsDocWriter`);
-      const step2 = await run(agentsDocWriter, step1.finalOutput, { maxTurns: 20 });
+      const initialAgentMdPrompt = "Generate an AGENTS.md for this repository.";
+      const step2 = await run(agentsDocWriter, initialAgentMdPrompt, { maxTurns: 40 });
       if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
         throw new Error('AgentsDocWriter produced no output');
       }

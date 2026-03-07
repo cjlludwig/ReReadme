@@ -4,7 +4,6 @@
 - Target: < 100 lines in final output. Every line must be universally applicable to any task in this repo.
 - Omit Conventions entirely if patterns are obvious from the codebase — Agent will infer them.
 - Omit any section where nothing concrete was discovered.
-- Output ONLY the final AGENTS.md markdown. No preamble, no closing commentary, no wrapping code fences.
 -->
 
 ## Project
@@ -13,29 +12,36 @@
 
 ## Commands
 
-> Only commands an agent will actually need to run. One fenced shell block, each line commented. Emphasive quality and validation checks like linters, tests, etc.
+> All commands an agent may need. Infer from all task runners, build tools, and CI workflow steps present in the codebase.
+> Format as a single fenced shell block with inline comments grouped by lifecycle phase.
+> Omit commands not present in the codebase.
 
+<!-- EXAMPLE
 ```shell
-npm install       # install dependencies
-npm run start     # start the application
-npm run test      # run test suite — must pass before committing
-npm run lint      # lint — must pass before committing
+# Develop
+npm run start          # start the application (localhost:PORT)
+npm run dev            # start with hot reload (if present)
+
+# Validate — run before every commit
+npm run lint           # lint
+npm run typecheck      # type check (if present)
+npm run test:e2e       # end-to-end tests (if present)
+
+# Build
+npm run build          # compile / bundle
+
+# Database / migrations (if present)
+npm run db:migrate     # run pending migrations
+
+# Make targets (if Makefile present)
+make deploy            # describe
 ```
-
-## Structure
-
-> Only files/dirs the agent will navigate or modify. Omit generated/compiled output.
-> Format: `path` — one-line purpose
-
-- `src/` — application source
-- `src/index.ts` — entry point
-- `tests/` — test suite root
+-->
 
 ## Architecture
 
-> Single-service / layered → ASCII tree (```text), request/data flow top-down.
-> Multi-service / event-driven → Mermaid (```mermaid), graph TD, edges labeled with protocol.
-> Only include what exists in the codebase.
+> Only include if topology is non-obvious from the file structure. Omit for single-concern repos.
+> Multi-service or external-dependency-heavy → Mermaid `graph TD`, edges labeled with protocol. Only diagram components with explicit instantiation or config. Do not infer from imports.
 
 ## Constraints
 
@@ -44,13 +50,21 @@ npm run lint      # lint — must pass before committing
 > Format: `- **label**: rule`
 
 - **Generated files**: do not edit `dist/`, `build/`, or lock files directly
-- **Secrets**: never hardcode env vars; use `process.env` / config loader pattern found in `src/config`
 
-## Testing
+## Environment
 
-- **Run**: `npm run test`
-- **Location**: `tests/` mirroring `src/` structure
-- **Pattern**: `*.test.ts`
+> Omit if the repo has no external prerequisites. Include only what an agent cannot infer or self-configure.
+
+- **Required**: list any env files, secret stores, or external services that must be provisioned before commands will run
+- **Setup**: minimal steps to bootstrap a working local environment if not covered by Installation
+
+## Quality
+
+> Infer from test config, lint config, and CI workflow. Omit if fully covered by Commands.
+
+- **Tests**: location, file pattern, and any required setup (e.g. env, seed data)
+- **Lint**: tool and any non-obvious rules not enforced by config
+- **CI**: what must pass before merge
 
 <!-- REMINDERS
 - Remove any hints from final output. Ex: `>` or `<!--` blocks

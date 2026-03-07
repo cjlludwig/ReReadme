@@ -2,78 +2,50 @@
 
 ## Project
 
-rereadme is a TypeScript CLI tool that refreshes README files using a two-agent workflow driven by OpenAI Agents and ZX, with filesystem tools and a templated output format. Stack: `TypeScript`, `Node.js`, `ZX`, `OpenAI Agents SDK`, local filesystem.
+rereadme is a CLI tool to refresh README files automatically with up-to-date information based on code contents, documents, and external sources like Confluence. Stack: `TypeScript`, `Node.js`, `Google ZX`, `filesystem`.
 
 ## Commands
 
 ```shell
-npm install       # install dependencies
-npm run start     # start the application
-npm run test      # run test suite — must pass before committing
-npm run lint      # lint — must pass before committing
-make lint-ts # ESLint (typescript-eslint recommended + type-checked)
-make lint-md # markdownlint on all `*.md` files |
-make lint-py # ruff check` on `experiments/
-make typecheck-ts # tsc --noEmit
-make typecheck-py # mypy` on `experiments/
-make test # npm test` (Jest)
-make check # All of the above, sequentially, fail-fast
-make fix # Auto-fix: `eslint --fix` + `markdownlint --fix` + `ruff --fix`
+# Develop
+npm run dev            # Run the CLI in development mode
+npm run refresh        # Run the full README refresh workflow
+npm run refresh:interactive # Run with interactive prompts
+
+# Validate
+npm run check          # Lint, typecheck, and dependency checks
+npm run test           # Run unit tests
+npm run help           # Show CLI help
+
+# Build
+npm run build          # Compile TypeScript to JavaScript (dist)
+
+# Other
+npm run setup          # Initialize submodules and experiments environment
+npm run eval           # Run the experiments evaluation workflow
+npm run prepare        # Husky prepare (install git hooks)
+
+# Make targets
+make check             # Run all checks (lint, typecheck, deps, etc.)
+make fix               # Apply automatic fixes
 ```
-
-## Structure
-
-- `bin/` — CLI wrapper entry points (bin/rereadme.js)
-- `script.ts` — Root CLI orchestrator
-- `lib/` — Agent workflow components
-- `lib/agents.ts` — Researcher and TemplateEnforcer agent definitions
-- `lib/tools.ts` — Filesystem tools (listDirectory, readFile, searchCode, getStructure)
-- `templates/` — Output templates
-- `templates/README_TEMPLATE.md` — Template used to structure the final README
-- `docs/` — Documentation references and project notes
-- `package.json` — Project metadata, scripts, and dependencies
-
-## Architecture
-
-Two-agent, layered workflow:
-
-Client (CLI)  
- └─ Tools (filesystem)  
-       └─ Researcher  
-             └─ TemplateEnforcer  
-                   └─ README.md (final output)
-
-The workflow is orchestrated by script.ts, kicked off by bin/rereadme.js, with the Researcher extracting factual repository details via internal tools and the TemplateEnforcer applying the standardized README template.
 
 ## Constraints
 
 - **Generated files**: do not edit `dist/`, `build/`, or lock files directly
-- **Secrets**: never hardcode env vars; use `process.env` / config loader pattern found in `src/config`
 
-## Testing
+## Environment
 
-- **Run**: `npm run test`
-- **Location**: `tests/` mirroring `lib/`/project structure
-- **Pattern**: `*.test.ts`
+- **Required**: `Node` (engine: `>=22.0.0`), `npm`, Git
+- **Environment Variables**: `OPENAI_API_KEY` must be set for AI processing
+- **Setup**: bootstrap by installing dependencies and validating toolchain
+  - `npm install`
+  - Optional: `npm run setup` to initialize submodules and experiments
+  - Verify with `npm run check`
 
-## Help
+## Quality
 
-Common issues and workarounds:
-
-- Missing dependencies: Run `npm run check` or `npm run install` to verify tooling
-- OpenAI API errors: Ensure `OPENAI_API_KEY` is set and has sufficient credits
-- Permission errors: Ensure you have write access to the target README file
-- Large repositories: Adjust scope or use interactive mode to review steps
-
-Tips:
-
-- Use `--interactive` to review changes at each step
-- Use `--verbose` for detailed command output
-- The tool creates backups of existing READMEs before updating
-- Works best with structured codebases and standard conventions
-
-## References
-
-- [Google ZX Documentation](https://github.com/google/zx)
-- [OpenAI Agents (GitHub Repository)](https://github.com/openai/agents)
-- [Markdownlint CLI](https://github.com/igorshubovych/markdownlint-cli)
+- **Tests**: Jest tests located at `script.spec.ts`; run with `npm test`
+- **Lint**: ESLint for TS/JS and markdownlint for Markdown; accessible via `make check` or individual targets
+- **CI**: Ensure unit tests and all checks pass as part of the normal workflow (see Makefile targets for lint/typecheck/deps/tests)
+- **Project structure references**: core code resides under `lib/` (agents, runner, tools) and `bin/`/`script.ts` for CLI entry points

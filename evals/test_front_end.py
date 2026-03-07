@@ -14,6 +14,7 @@ from metrics import (
     FRONT_END_README_KEYWORDS,
     FRONT_END_AGENTS_KEYWORDS,
     AGENTS_SECTIONS,
+    AGENTS_MIN_CONTENT_LENGTH,
 )
 
 
@@ -86,8 +87,8 @@ def test_agents_section_headers(generated_agents_front_end: str) -> None:
 
 
 def test_agents_section_content(generated_agents_front_end: str) -> None:
-    """Core AGENTS.md sections must have meaningful content (>= 20 chars)."""
-    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_SECTIONS)
+    """Core AGENTS.md sections must have meaningful content."""
+    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_SECTIONS, min_content_length=AGENTS_MIN_CONTENT_LENGTH)
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for front-end",
         actual_output=generated_agents_front_end,

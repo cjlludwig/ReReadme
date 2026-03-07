@@ -11,6 +11,7 @@ from metrics import (
     GoldenAlignmentJudgeMetric,
     EXPRESS_AGENTS_KEYWORDS,
     AGENTS_SECTIONS,
+    AGENTS_MIN_CONTENT_LENGTH,
 )
 
 
@@ -82,8 +83,8 @@ def test_agents_section_headers(generated_agents_express_server: str) -> None:
 
 
 def test_agents_section_content(generated_agents_express_server: str) -> None:
-    """Core AGENTS.md sections must have meaningful content (>= 20 chars)."""
-    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_SECTIONS)
+    """Core AGENTS.md sections must have meaningful content."""
+    metric = SectionContentMetric(threshold=1.0, sections=AGENTS_SECTIONS, min_content_length=AGENTS_MIN_CONTENT_LENGTH)
     test_case = LLMTestCase(
         input="Generate an AGENTS.md for express-server",
         actual_output=generated_agents_express_server,

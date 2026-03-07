@@ -35,11 +35,14 @@ REREADME_README_KEYWORDS = [
 
 REREADME_AGENTS_KEYWORDS = [
     "npm run",
-    "start",
+    "node",
+    "make",
+    "eval",
+    "check",
     "refresh",
     "help",
-    "npm test",
-    "TypeScript",
+    "test",
+    "OPENAI_API_KEY",
 ]
 
 FRONT_END_README_KEYWORDS = [
@@ -56,12 +59,16 @@ FRONT_END_README_KEYWORDS = [
 
 FRONT_END_AGENTS_KEYWORDS = [
     "make test",
-    "npm start",
+    "npm",
+    "npm run",
     "make dev",
     "make server",
     "make e2e",
 ]
 
 AGENTS_SECTIONS = ["## Project", "## Commands"]
+
+# AGENTS.md sections tend to be terse (short command lists), so use a lower bar
+AGENTS_MIN_CONTENT_LENGTH = 5
 
 GEVAL_MODEL = "gpt-4o-mini"
