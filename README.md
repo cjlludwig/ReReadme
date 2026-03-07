@@ -10,7 +10,7 @@
 
 <!-- markdownlint-disable -->
 <div align="center">
-   <img src="docs/assets/demo-small.gif" alt="rereadme demo" />
+   <img src="docs/assets/demo.gif" alt="rereadme demo" />
 </div>
 <!-- markdownlint-enable -->
 
