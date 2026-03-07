@@ -3,6 +3,7 @@ import { tmpdir } from 'os'
 import { writeFile, rm, mkdtemp } from 'fs/promises'
 import { join } from 'path'
 import { validateTemplate } from '../lib/validate.js'
+import { ReadmeSuggestionSchema } from '../lib/agents.js'
 
 describe("validateTemplate", () => {
     let tmpDir: string
@@ -77,5 +78,29 @@ describe("validateTemplate", () => {
             await writeFile(file, `${'#'.repeat(level)} Heading Level ${level}\n\nContent.\n`, 'utf-8')
             await expect(validateTemplate(file, 'README template')).resolves.toBeDefined()
         }
+    })
+})
+
+describe("ReadmeSuggestionSchema", () => {
+    const validFixture = {
+        signalLevel: 'high' as const,
+        significanceReason: 'New --timeout flag added',
+        changes: [
+            {
+                sectionHeading: '## Usage',
+                currentExcerpt: 'rereadme --ci',
+                suggestedReplacement: 'rereadme --ci --timeout 30',
+                reason: 'script.ts:42 added --timeout flag',
+            },
+        ],
+        summary: 'The --timeout flag was added to the CLI.',
+    }
+
+    it("should validate a valid fixture", () => {
+        expect(ReadmeSuggestionSchema.safeParse(validFixture).success).toBe(true)
+    })
+
+    it("should reject a fixture missing required fields", () => {
+        expect(ReadmeSuggestionSchema.safeParse({ signalLevel: 'high' }).success).toBe(false)
     })
 })

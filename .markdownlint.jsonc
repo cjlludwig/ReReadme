@@ -1,6 +1,11 @@
 {
-  // Line length is impractical for documentation prose
-  "MD013": false,
+  "MD013": { "line_length": 500, "code_blocks": false, "tables": false },
   // Allow compact table style (no spaces around pipes)
-  "MD060": false
+  "MD060": false,
+  // Allow snippets next to prior line for lists
+  "MD031": false,
+  "MD032": false,
+  "MD029": false,
+  // Allow sub-headers to be bold inline
+  "MD036": false
 }

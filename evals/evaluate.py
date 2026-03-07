@@ -19,13 +19,13 @@ from metrics import (  # noqa: E402
     SectionHeadersMetric,
     SectionContentMetric,
     KeywordsMetric,
-    AdaptiveGEvalMetric,
+    GoldenAlignmentJudgeMetric,
     EXPRESS_AGENTS_KEYWORDS,
     REREADME_README_KEYWORDS,
     REREADME_AGENTS_KEYWORDS,
+    FRONT_END_README_KEYWORDS,
+    FRONT_END_AGENTS_KEYWORDS,
     AGENTS_SECTIONS,
-    README_GEVAL_CRITERIA,
-    AGENTS_GEVAL_CRITERIA,
 )
 
 # --- Constants ---
@@ -38,12 +38,14 @@ EXPRESS_README_GOLDEN = os.path.join(GOLDEN_DIR, "express-server-README.md")
 EXPRESS_AGENTS_GOLDEN = os.path.join(GOLDEN_DIR, "express-server-AGENTS.md")
 REREADME_README_GOLDEN = os.path.join(GOLDEN_DIR, "rereadme-README.md")
 REREADME_AGENTS_GOLDEN = os.path.join(GOLDEN_DIR, "rereadme-AGENTS.md")
+FRONT_END_README_GOLDEN = os.path.join(GOLDEN_DIR, "front-end-README.md")
+FRONT_END_AGENTS_GOLDEN = os.path.join(GOLDEN_DIR, "front-end-AGENTS.md")
 
 SHARED_METRICS: list = [
     SectionHeadersMetric(threshold=1.0),
     SectionContentMetric(threshold=1.0),
     KeywordsMetric(threshold=1.0),
-    AdaptiveGEvalMetric(),
+    GoldenAlignmentJudgeMetric(),
 ]
 
 
@@ -192,6 +194,24 @@ def main() -> None:
             keywords=REREADME_AGENTS_KEYWORDS,
             sections=AGENTS_SECTIONS,
         ),
+        EvalUnit(
+            label="front-end / README",
+            dataset_name="front-end",
+            output_type="readme",
+            input_prompt="Generate a README for front-end",
+            golden_path=FRONT_END_README_GOLDEN,
+            keywords=FRONT_END_README_KEYWORDS,
+            sections=None,  # use default README sections
+        ),
+        EvalUnit(
+            label="front-end / AGENTS.md",
+            dataset_name="front-end",
+            output_type="agents",
+            input_prompt="Generate an AGENTS.md for front-end",
+            golden_path=FRONT_END_AGENTS_GOLDEN,
+            keywords=FRONT_END_AGENTS_KEYWORDS,
+            sections=AGENTS_SECTIONS,
+        ),
     ]
 
     # Phase 1: All LLM runs
@@ -199,12 +219,16 @@ def main() -> None:
     express_readme, express_agents = run_rereadme("express-server")
     print("Running rereadme against rereadme...")
     rereadme_readme, rereadme_agents = run_rereadme("rereadme")
+    print("Running rereadme against front-end...")
+    front_end_readme, front_end_agents = run_rereadme("front-end")
 
     dataset_outputs: dict[tuple[str, str], str] = {
         ("express-server", "readme"): express_readme,
         ("express-server", "agents"): express_agents,
         ("rereadme", "readme"): rereadme_readme,
         ("rereadme", "agents"): rereadme_agents,
+        ("front-end", "readme"): front_end_readme,
+        ("front-end", "agents"): front_end_agents,
     }
 
     # Phase 2: Load goldens + build all test cases
@@ -212,7 +236,6 @@ def main() -> None:
     for unit in units:
         content = dataset_outputs[(unit.dataset_name, unit.output_type)]
         golden, golden_created = load_or_create_golden(unit.golden_path, content, unit.label)
-        criteria = README_GEVAL_CRITERIA if unit.output_type == "readme" else AGENTS_GEVAL_CRITERIA
         test_case = LLMTestCase(
             input=unit.input_prompt,
             actual_output=content,
@@ -220,7 +243,6 @@ def main() -> None:
             additional_metadata={
                 "keywords": unit.keywords,
                 "sections": unit.sections,
-                "geval_criteria": criteria,
             },
         )
         prepared.append((unit, test_case, golden_created))

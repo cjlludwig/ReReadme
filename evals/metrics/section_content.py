@@ -8,11 +8,17 @@ MIN_CONTENT_LENGTH = 20
 
 
 class SectionContentMetric(BaseMetric):
-    """Checks that each required section has non-empty content (>= 20 chars)."""
+    """Checks that each required section has non-empty content (>= min_content_length chars)."""
 
-    def __init__(self, threshold: float = 1.0, sections: list[str] | None = None):
+    def __init__(
+        self,
+        threshold: float = 1.0,
+        sections: list[str] | None = None,
+        min_content_length: int = MIN_CONTENT_LENGTH,
+    ):
         self.threshold = threshold
         self.sections = sections if sections is not None else REQUIRED_SECTIONS
+        self.min_content_length = min_content_length
         self.score = 0.0
         self.success = False
         self.reason = ""
@@ -28,7 +34,7 @@ class SectionContentMetric(BaseMetric):
 
             for section in sections:
                 section_content = self._extract_section_content(content, section)
-                if section_content and len(section_content.strip()) >= MIN_CONTENT_LENGTH:
+                if section_content and len(section_content.strip()) >= self.min_content_length:
                     sections_with_content.append(section)
                 else:
                     empty_sections.append(section)

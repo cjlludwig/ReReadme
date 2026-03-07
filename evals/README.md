@@ -47,6 +47,10 @@ Runs rereadme against a Node.js/Express/MongoDB sample project. Keywords checked
 
 Runs rereadme against its own repository (self-referencing submodule). Keywords checked: `npm install`, `npm run dev`, `OPENAI_API_KEY`, `TypeScript`, `OpenAI Agents SDK`, `markdownlint`.
 
+### front-end (`test_front_end.py`)
+
+Runs rereadme against an Express/Redis/Prometheus/Mocha BFF microservice (port 8079). Includes 8 standard tests plus 2 LLM-judge tests for readability and template adherence. Keywords checked: `npm install`, `npm test`, `Express`, `Redis`, `Docker`, `Prometheus`.
+
 ## Metrics
 
 ### Deterministic Metrics
@@ -57,11 +61,17 @@ Runs rereadme against its own repository (self-referencing submodule). Keywords 
 | **Section Content** | Each required section has >= 20 chars of content | 1.0 |
 | **NPM Commands** | `npm install` and `npm test` appear in output | 1.0 |
 
-### LLM-as-Judge Metric
+### LLM-as-Judge Metrics
 
 | Metric | What it checks | Threshold |
 |--------|---------------|-----------|
 | **README Similarity** (GEval) | Semantic similarity to golden README — structure, accuracy, completeness | 0.85 |
+| **Readability Judge** | Boolean PASS/FAIL — clarity, conciseness, and Markdown structure | 1.0 |
+| **Template Adherence Judge** | Boolean PASS/FAIL — section coverage, alignment to template, no unfilled placeholders | 1.0 |
+
+#### Boolean Judge Metrics
+
+`ReadabilityJudgeMetric` and `TemplateAdherenceJudgeMetric` are `BaseMetric` subclasses in `metrics/judge.py` that call an OpenAI LLM with a fixed system prompt and parse a `verdict: PASS | FAIL` response. Score is `1.0` for PASS and `0.0` for FAIL, with a default threshold of `1.0`. The `reasoning` field is exposed for DeepEval's report output. These are applied to the front-end README in `test_front_end.py`.
 
 ## Golden README Workflow
 

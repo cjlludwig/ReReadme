@@ -3,6 +3,8 @@
 // rereadme - CLI tool to automatically update README files
 import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
+import { lint, readConfig } from 'markdownlint/promise'
+import { applyFixes } from 'markdownlint'
 import { runAgentWorkflow, runDiffWorkflow, type WorkflowStats } from './lib/runner.js'
 import { renderSuggestions, applyPatches } from './lib/readme-utils.js'
 import { validateTemplate } from './lib/validate.js'
@@ -42,17 +44,6 @@ async function checkGitRepo(): Promise<boolean> {
 
 export async function checkDependencies(): Promise<boolean> {
   const errors: string[] = []
-
-  try {
-    const result = await $({ nothrow: true, quiet: true })`markdownlint --version`
-    if (result.exitCode === 0) {
-      log.detail('markdownlint-cli found')
-    } else {
-      errors.push(`markdownlint-cli not found\n${pc.dim('  Fix: npm install')}`)
-    }
-  } catch {
-    errors.push(`markdownlint-cli not found\n${pc.dim('  Fix: npm install')}`)
-  }
 
   if (!process.env.OPENAI_API_KEY) {
     errors.push(`OPENAI_API_KEY not set\n${pc.dim('  Fix: export OPENAI_API_KEY=sk-...')}`)
@@ -240,16 +231,33 @@ export async function updateReadme(content: string): Promise<void> {
   log.detail(`${OUTPUT_FILE} written`)
 }
 
+async function lintAndFix(filePath: string): Promise<void> {
+  const configPath = path.join(SCRIPT_DIR, '.markdownlint.jsonc')
+  const config = await readConfig(configPath, [(content: string) =>
+    JSON.parse(content.replace(/^\s*\/\/.*$/gm, '')) as Record<string, unknown>
+  ])
+  const content = String(await fs.readFile(filePath, 'utf-8'))
+  const results = await lint({ strings: { [filePath]: content }, config })
+  const errors = results[filePath] ?? []
+  const fixed = applyFixes(content, errors)
+  if (fixed !== content) {
+    await fs.writeFile(filePath, fixed)
+  }
+  const unfixable = errors.filter(e => !e.fixInfo)
+  if (unfixable.length > 0) {
+    log.warn(`Some markdown issues in ${filePath} may need manual fixing`)
+    for (const e of unfixable) {
+      const rule = e.ruleNames[0] ?? ''
+      const detail = e.errorDetail ? `  ${e.errorDetail}` : ''
+      log.detail(`  line ${e.lineNumber}  ${rule}  ${e.ruleDescription}${detail}`)
+    }
+  }
+}
+
 export async function formatReadme(): Promise<void> {
   log.detail(`Formatting ${OUTPUT_FILE} with markdownlint`)
-  const fixResult = await $({ nothrow: true })`markdownlint --fix --disable MD013 -- ${OUTPUT_FILE}`
-  if (fixResult.exitCode === 0) {
-    log.detail(`${OUTPUT_FILE} formatted`)
-  } else {
-    log.warn(`Some markdown issues in ${OUTPUT_FILE} may need manual fixing`)
-    if (fixResult.stderr) { log.detail(fixResult.stderr.trim()) }
-    if (fixResult.stdout) { log.detail(fixResult.stdout.trim()) }
-  }
+  await lintAndFix(OUTPUT_FILE)
+  log.detail(`${OUTPUT_FILE} formatted`)
 }
 
 export async function runWorkflow(): Promise<void> {
@@ -318,6 +326,7 @@ export async function runWorkflow(): Promise<void> {
 
     // Write README
     log.step(`Writing ${OUTPUT_FILE}`)
+    const outputFileExisted = await fs.pathExists(OUTPUT_FILE)
     await updateReadme(readmeContent)
 
     // Write AGENTS.md if requested
@@ -356,6 +365,10 @@ export async function runWorkflow(): Promise<void> {
     }
 
     await formatReadme()
+
+    const project = readmeContent.match(/^#\s+(.+)$/m)?.[1]?.trim()
+    const action = outputFileExisted ? 'Updated' : 'Created'
+    log.info(`${action}${project ? ` ${project}` : ''} ${OUTPUT_FILE}`)
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     log.outro(`Done in ${elapsed}s`)

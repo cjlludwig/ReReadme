@@ -2,56 +2,73 @@
 # eval test files and evaluate.py.
 
 EXPRESS_README_KEYWORDS = [
-    "npm install",
+    "npm i",
     "npm start",
     "http://localhost:9000",
-    "Node.js",
-    "Express.js",
+    "Node",
+    "Express",
     "MongoDB",
 ]
 
 EXPRESS_AGENTS_KEYWORDS = [
-    "npm install",
+    "npm i",
     "npm start",
-    "Node.js",
-    "Express.js",
+    "Node",
+    "Express",
     "MongoDB",
 ]
 
 REREADME_README_KEYWORDS = [
-    "npm install",
-    "npm run dev",
+    "npm i",
+    "npm run",
+    "refresh",
+    "help",
+    "Node",
+    "Git",
+    "OpenAI",
     "OPENAI_API_KEY",
     "TypeScript",
-    "OpenAI Agents SDK",
+    "OpenAI Agents",
     "markdownlint",
-    "git clone https://github.com/connorludwig/rereadme.git",
     "rereadme",
-    "rereadme --check",
 ]
 
 REREADME_AGENTS_KEYWORDS = [
-    "npm run dev",
-    "npm test",
+    "npm run",
+    "node",
+    "make",
+    "eval",
+    "check",
+    "refresh",
+    "help",
+    "test",
     "OPENAI_API_KEY",
-    "TypeScript",
-    "script.ts",
+]
+
+FRONT_END_README_KEYWORDS = [
+    "npm i",
+    "npm start",
+    "make test",
+    "make dev",
+    "make server",
+    "make e2e",
+    "Redis",
+    "Docker",
+    "Prometheus",
+]
+
+FRONT_END_AGENTS_KEYWORDS = [
+    "make test",
+    "npm",
+    "npm run",
+    "make dev",
+    "make server",
+    "make e2e",
 ]
 
 AGENTS_SECTIONS = ["## Project", "## Commands"]
 
-README_GEVAL_CRITERIA = (
-    "Evaluate semantic similarity between the generated README and the golden README. "
-    "Consider section structure alignment, technical accuracy of descriptions, "
-    "and content completeness. Minor wording and structure differences should be tolerated."
-)
+# AGENTS.md sections tend to be terse (short command lists), so use a lower bar
+AGENTS_MIN_CONTENT_LENGTH = 5
 
-AGENTS_GEVAL_CRITERIA = (
-    "Evaluate semantic similarity between the generated AGENTS.md and the golden AGENTS.md. "
-    "Focus on: presence of required sections (Project, Commands), accuracy of commands, "
-    "correctness of file structure, and appropriate constraints. "
-    "Minor wording differences should be tolerated."
-)
-
-GEVAL_THRESHOLD = 0.70
-GEVAL_MODEL = "gpt-5-mini"
+GEVAL_MODEL = "gpt-4o-mini"

@@ -1,5 +1,8 @@
 node_modules
 evals/datasets
+evals/golden
 evals/results
 templates
 docs/plans
+local
+latest_run.md

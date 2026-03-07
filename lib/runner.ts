@@ -123,45 +123,38 @@ export async function runAgentWorkflow(
 ): Promise<{ readme: string; agents?: string; stats: WorkflowStats }> {
   const { model, readmeTemplate, agentsTemplate } = options;
 
-  const { researcher, templateEnforcer, detailFetcher, agentsDocWriter } = createAgents(model, readmeTemplate, agentsTemplate);
+  const { agentsDocWriter, readmeWriter } = createAgents(model, readmeTemplate, agentsTemplate);
   const stats: WorkflowStats = { toolCallCount: 0, toolCallsByAgent: {}, toolCallsByTool: {} };
-  attachToolLogger(researcher, 'Researcher', stats);
-  attachToolLogger(detailFetcher, 'DetailFetcher', stats);
+  attachToolLogger(readmeWriter, 'ReadmeWriter', stats);
+  if (agentsDocWriter) attachToolLogger(agentsDocWriter, 'AgentsDocWriter', stats);
 
-  const initialPrompt = 'Generate a README.md for this repository.';
-
-  const totalSteps = agentsDocWriter ? 3 : 2;
-
-  // Deterministic sequential pipeline: Researcher → TemplateEnforcer → (AgentsDocWriter?)
+  
+  const totalSteps = agentsDocWriter ? 2 : 1;
+  
+  // Single-agent pipeline: ReadmeWriter → (AgentsDocWriter?)
   const { readme, agents } = await withTrace('ReReadme Agent Workflow', async () => {
-    // Step 1: Researcher explores repo structure and analyzes file contents
-    log.verboseStep(`Step 1/${totalSteps}: Researcher (model: ${model})`);
-    const step1 = await run(researcher, initialPrompt, { maxTurns: 70 });
+    // Step 1: ReadmeWriter explores repo and writes the README
+    log.verboseStep(totalSteps > 1 ? `Step 1/${totalSteps}: ReadmeWriter (model: ${model})` : `ReadmeWriter (model: ${model})`);
+    const initialPrompt = 'Generate a README.md for this repository.';
+    const step1 = await run(readmeWriter, initialPrompt, { maxTurns: 40 });
     if (!step1.finalOutput || step1.finalOutput.trim().length === 0) {
-      throw new Error('Researcher produced no output');
+      throw new Error('ReadmeWriter produced no output');
     }
-    log.verboseStep(`Researcher done (${step1.finalOutput.length} chars)`);
+    log.verboseStep(`ReadmeWriter done (${step1.finalOutput.length} chars)`);
 
-    // Step 2: TemplateEnforcer generates the final README (may hand off to DetailFetcher)
-    log.verboseStep(`Step 2/${totalSteps}: TemplateEnforcer`);
-    const step2 = await run(templateEnforcer, step1.finalOutput, { maxTurns: 20 });
-    if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
-      throw new Error('TemplateEnforcer produced no output');
-    }
-    log.verboseStep(`TemplateEnforcer done (${step2.finalOutput.length} chars)`);
-
-    // Step 3 (optional): AgentsDocWriter generates AGENTS.md from the same Researcher output
+    // Step 2 (optional): AgentsDocWriter generates AGENTS.md from the same ReadmeWriter output
     if (agentsDocWriter) {
-      log.verboseStep(`Step 3/${totalSteps}: AgentsDocWriter`);
-      const step3 = await run(agentsDocWriter, step1.finalOutput, { maxTurns: 20 });
-      if (!step3.finalOutput || step3.finalOutput.trim().length === 0) {
+      log.verboseStep(`Step 2/${totalSteps}: AgentsDocWriter`);
+      const initialAgentMdPrompt = "Generate an AGENTS.md for this repository.";
+      const step2 = await run(agentsDocWriter, initialAgentMdPrompt, { maxTurns: 40 });
+      if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
         throw new Error('AgentsDocWriter produced no output');
       }
-      log.verboseStep(`AgentsDocWriter done (${step3.finalOutput.length} chars)`);
-      return { readme: step2.finalOutput, agents: step3.finalOutput };
+      log.verboseStep(`AgentsDocWriter done (${step2.finalOutput.length} chars)`);
+      return { readme: step1.finalOutput, agents: step2.finalOutput };
     }
 
-    return { readme: step2.finalOutput, agents: undefined };
+    return { readme: step1.finalOutput, agents: undefined };
   });
 
   return {

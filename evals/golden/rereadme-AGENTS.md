@@ -2,78 +2,68 @@
 
 ## Project
 
-rereadme is a TypeScript CLI tool that refreshes README files using a two-agent workflow driven by OpenAI Agents and ZX, with filesystem tools and a templated output format. Stack: `TypeScript`, `Node.js`, `ZX`, `OpenAI Agents SDK`, local filesystem.
+`rereadme` is a CLI tool that refreshes `README.md` files from code context, existing docs, and optional external sources using `TypeScript`, `Node.js`, `Google ZX`, and the `OpenAI` API.
 
 ## Commands
 
 ```shell
-npm install       # install dependencies
-npm run start     # start the application
-npm run test      # run test suite — must pass before committing
-npm run lint      # lint — must pass before committing
-make lint-ts # ESLint (typescript-eslint recommended + type-checked)
-make lint-md # markdownlint on all `*.md` files |
-make lint-py # ruff check` on `experiments/
-make typecheck-ts # tsc --noEmit
-make typecheck-py # mypy` on `experiments/
-make test # npm test` (Jest)
-make check # All of the above, sequentially, fail-fast
-make fix # Auto-fix: `eslint --fix` + `markdownlint --fix` + `ruff --fix`
+# Develop
+npm run dev                      # run the CLI from source
+npm run refresh                  # run the README refresh workflow
+npm run refresh:interactive      # run the workflow with manual step approval
+npm run help                     # show CLI help
+npm run check                    # verify required dependencies
+
+# Validate
+npm test                         # run Jest tests
+make test                        # run npm test via Make
+make lint-ts                     # lint TypeScript with ESLint
+make lint-md                     # lint Markdown with markdownlint
+make lint-py                     # lint experiments/ Python with Ruff
+make typecheck-ts                # type-check TypeScript with tsc --noEmit
+make typecheck-py                # type-check experiments/ Python with mypy
+make deps-ts                     # check Node dependency usage with depcheck
+make deps-py                     # check Python dependency usage with deptry
+make check                       # run all lint, typecheck, and dependency checks
+make fix                         # apply available ESLint, markdownlint, and Ruff fixes
+
+# Build
+npm run build                    # compile TypeScript
+npm run start                    # run compiled output
+
+# Experiments / eval
+npm run setup                    # init submodules and sync experiments/ Python deps
+npm run eval                     # run deepeval tests in experiments/
 ```
-
-## Structure
-
-- `bin/` — CLI wrapper entry points (bin/rereadme.js)
-- `script.ts` — Root CLI orchestrator
-- `lib/` — Agent workflow components
-- `lib/agents.ts` — Researcher and TemplateEnforcer agent definitions
-- `lib/tools.ts` — Filesystem tools (listDirectory, readFile, searchCode, getStructure)
-- `templates/` — Output templates
-- `templates/README_TEMPLATE.md` — Template used to structure the final README
-- `docs/` — Documentation references and project notes
-- `package.json` — Project metadata, scripts, and dependencies
 
 ## Architecture
 
-Two-agent, layered workflow:
-
-Client (CLI)  
- └─ Tools (filesystem)  
-       └─ Researcher  
-             └─ TemplateEnforcer  
-                   └─ README.md (final output)
-
-The workflow is orchestrated by script.ts, kicked off by bin/rereadme.js, with the Researcher extracting factual repository details via internal tools and the TemplateEnforcer applying the standardized README template.
+```mermaid
+graph TD
+  CLI["`script.ts` CLI"] -->|"filesystem / shell"| Runner["`lib/runner.ts`"]
+  Runner -->|"agent orchestration"| Agents["`lib/agents.ts`"]
+  Agents -->|"filesystem tools"| Tools["`lib/tools.ts`"]
+  CLI -->|"reads/writes"| Templates["`templates/`"]
+  CLI -->|"exec"| Gitingest["`gitingest` CLI"]
+  CLI -->|"API"| OpenAI["`OpenAI API`"]
+  CLI -->|"optional MCP"| Confluence["`Confluence`"]
+```
 
 ## Constraints
 
 - **Generated files**: do not edit `dist/`, `build/`, or lock files directly
-- **Secrets**: never hardcode env vars; use `process.env` / config loader pattern found in `src/config`
+- **Runtime**: use `Node.js >=22.0.0`
+- **System tools**: `gitingest` and `markdownlint-cli` must be installed for the workflow and checks described in the repo
+- **Experiments**: `experiments/` uses `uv` and Python tooling; `npm run setup` initializes submodules and syncs those dependencies
 
-## Testing
+## Environment
 
-- **Run**: `npm run test`
-- **Location**: `tests/` mirroring `lib/`/project structure
-- **Pattern**: `*.test.ts`
+- **Required**: set `OPENAI_API_KEY` before running AI-backed README processing or eval workflows
+- **Setup**: install `gitingest` with `pip install gitingest`; install `markdownlint-cli` with `npm install -g markdownlint-cli` or `brew install markdownlint-cli`
+- **Optional**: Confluence MCP integration is supported for external documentation sources
 
-## Help
+## Quality
 
-Common issues and workarounds:
-
-- Missing dependencies: Run `npm run check` or `npm run install` to verify tooling
-- OpenAI API errors: Ensure `OPENAI_API_KEY` is set and has sufficient credits
-- Permission errors: Ensure you have write access to the target README file
-- Large repositories: Adjust scope or use interactive mode to review steps
-
-Tips:
-
-- Use `--interactive` to review changes at each step
-- Use `--verbose` for detailed command output
-- The tool creates backups of existing READMEs before updating
-- Works best with structured codebases and standard conventions
-
-## References
-
-- [Google ZX Documentation](https://github.com/google/zx)
-- [OpenAI Agents (GitHub Repository)](https://github.com/openai/agents)
-- [Markdownlint CLI](https://github.com/igorshubovych/markdownlint-cli)
+- **Tests**: Jest runs `script.spec.ts` via `npm test`; eval coverage lives under `experiments/` and runs with `npm run eval`
+- **Lint**: TypeScript uses `eslint`; Markdown uses `markdownlint`; Python in `experiments/` uses `ruff`
+- **CI**: the planned evaluation workflow installs Node, Python, and `uv`, then runs `npm run eval`; it requires `OPENAI_API_KEY` in repository secrets

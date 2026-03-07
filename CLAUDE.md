@@ -103,3 +103,4 @@ A `Makefile` at the repo root drives all quality checks:
 - Update CLAUDE.md as key details are found.
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - Prefer `npm` script commands over `npx` for standardized scripts. Update if needed.
+- Prefer JSDocs for function level comments or descriptions. In-line should only be used if the logic isn't self explanatory or readable.
