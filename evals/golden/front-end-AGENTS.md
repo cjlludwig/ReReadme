@@ -2,70 +2,59 @@
 
 ## Project
 
-Front end for a microservices demo application. Stack: `JavaScript`, `Node.js`, `Express`, `Redis` (optional for sessions).
+`microservices-demo-front-end` is a deprecated front-end application that aggregates the `microservices-demo` services, built with `JavaScript`, `Node.js`, `Express`, and optional `Redis`-backed sessions.
 
 ## Commands
 
 ```shell
-npm install       # install dependencies
-npm start         # start the server
-npm test          # run test suite
-npm run lint      # lint the code
+# Install
+npm install                          # install Node.js dependencies
+make test-image                      # build the Docker image used for local runs and tests
+
+# Develop / Run
+npm start                            # start the app with Node.js (defaults to `localhost:8079`; README uses `localhost:8081`)
+make up                              # start backing microservices with Docker Compose, build image, install deps in container, and run front-end on `localhost:8080`
+make server                          # run the front-end container on `localhost:8080`
+make dev                             # rebuild and run the local front-end container for e2e debugging, then tail logs
+make down                            # stop the front-end container and Docker Compose services
+
+# Validate
+npm test                             # run unit and API tests with `mocha` via `istanbul`
+make test                            # run unit tests in Docker
+make coverage                        # generate coverage and JUnit-style test results in Docker
+make e2e                             # run `casperjs` end-to-end tests against the Docker Compose stack
+
+# Image publish
+GROUP=weaveworksdemos COMMIT=test ./scripts/push.sh  # push image with required env vars
 ```
-
-## Structure
-
-- `server.js` — entry point; serves static assets from public/ and mounts API proxies to backend services
-- `public/` — static UI assets (e.g., index.html, category.html, product detail pages)
-- `api/endpoints.js` — defines backend service hostnames (catalogue, carts, orders, user)
-- `config.js` — session store configuration and domain suffix handling
-- `package.json` — project metadata; start script and dependencies
-- `Dockerfile` — container image for front-end
-- `Makefile` — (if present) Node-based workflow automation
-- `test/` and `test/e2e/` — unit and end-to-end tests (CasperJS in e2e)
 
 ## Architecture
 
-```text
-Frontend(Node.js/Express)
-├─ public/  (static UI)
-└─ api endpoints (proxy to backend services)
-   ├─ catalogue
-   ├─ carts
-   ├─ orders
-   └─ user
+```mermaid
+graph TD
+  FE[front-end container / Node.js app] -- HTTP --> EDGE[edge-router]
+  FE -- HTTP --> CAT[catalogue]
+  FE -- HTTP --> CART[carts]
+  FE -- HTTP --> ORD[orders]
+  FE -- HTTP --> USER[user]
+  FE -- optional Redis session store --> REDIS[(Redis)]
 ```
 
 ## Constraints
 
 - **Generated files**: do not edit `dist/`, `build/`, or lock files directly
-- **Secrets**: never hardcode env vars; use `process.env` / config loader pattern found in `src/config`
-- **Environment**: relies on backend microservices (catalogue, carts, orders, user); run a local stack if needed (e.g., via Docker-compose)
+- **Project status**: this repository is marked deprecated in `README.md`
+- **E2E prerequisites**: end-to-end tests assume the microservices stack is already up and the front-end is reachable at `http://front-end:8080/`
+- **Docker network**: `make server` and `make e2e` expect the `test_default` network created by `docker-compose -f test/docker-compose.yml up -d`
 
-## Testing
+## Environment
 
-- **Run**: `npm test`
-- **Location**: unit tests under `tests/` (mirroring `src/`), end-to-end tests under `test/e2e/`
-- **Pattern**: unit tests follow `*.test.ts`; e2e tests use CasperJS
+- **Required**: `Docker` `>= 1.12`; `Docker Compose` `>= 1.8.0`; `Make` `>= 4.1` is optional
+- **Setup**: run `npm install` for local Node.js usage, or use `make up` to provision the Docker Compose-backed environment
+- **Services**: tests and Docker-based runs depend on the backing demo services defined in `test/docker-compose.yml`
+- **Variables**: `PORT` overrides the app listen port; `SESSION_REDIS` enables Redis session storage; `GROUP` and `COMMIT` are required by `./scripts/push.sh`
 
-## References
+## Quality
 
-- Node.js: <https://nodejs.org/>
-- Express: <https://expressjs.com/>
-- Docker: <https://www.docker.com/>
-- CasperJS: <https://casperjs.org/>
-- The repository: Weaveworks microservices demo front-end (<https://github.com/weaveworks/microservices-demo>)
-- License (Apache 2.0): <https://www.apache.org/licenses/LICENSE-2.0>
-
-## Help
-
-- Domain/debug arguments:
-  - The frontend supports a `--domain` flag to set a domain suffix for backend endpoints (e.g., `catalogue.`, `carts.`, etc.). See `server.js` and `api/endpoints.js` for parsing and application.
-- Environment considerations:
-  - The app expects backend microservices (catalogue, carts, orders, user) to be available at hostnames defined in `api/endpoints.js`. Bring up a local stack if needed (e.g., via `test/docker-compose.yml` or a custom setup).
-- Tests:
-  - Unit tests and API tests are configured via `npm test` (unit tests in `tests/`, e2e tests in `test/e2e/` with CasperJS). Ensure dependencies and environment are prepared before running.
-
-## License
-
-Apache License, Version 2.0. See LICENSE for details.
+- **Tests**: unit tests live in `test/*_test.js` and API tests in `test/api/*_test.js`; e2e tests live in `test/e2e/*_test.js` and are run by `test/e2e/runner.sh` with `casperjs`
+- **CI**: GitHub Actions installs dependencies, runs `make test`, builds the Docker image, runs `./test/container.sh`, and only pushes images on `master` or version tags using `DOCKER_USER` and `DOCKER_PASS` secrets

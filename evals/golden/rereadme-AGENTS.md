@@ -2,50 +2,68 @@
 
 ## Project
 
-rereadme is a CLI tool to refresh README files automatically with up-to-date information based on code contents, documents, and external sources like Confluence. Stack: `TypeScript`, `Node.js`, `Google ZX`, `filesystem`.
+`rereadme` is a CLI tool that refreshes `README.md` files from code context, existing docs, and optional external sources using `TypeScript`, `Node.js`, `Google ZX`, and the `OpenAI` API.
 
 ## Commands
 
 ```shell
 # Develop
-npm run dev            # Run the CLI in development mode
-npm run refresh        # Run the full README refresh workflow
-npm run refresh:interactive # Run with interactive prompts
+npm run dev                      # run the CLI from source
+npm run refresh                  # run the README refresh workflow
+npm run refresh:interactive      # run the workflow with manual step approval
+npm run help                     # show CLI help
+npm run check                    # verify required dependencies
 
 # Validate
-npm run check          # Lint, typecheck, and dependency checks
-npm run test           # Run unit tests
-npm run help           # Show CLI help
+npm test                         # run Jest tests
+make test                        # run npm test via Make
+make lint-ts                     # lint TypeScript with ESLint
+make lint-md                     # lint Markdown with markdownlint
+make lint-py                     # lint experiments/ Python with Ruff
+make typecheck-ts                # type-check TypeScript with tsc --noEmit
+make typecheck-py                # type-check experiments/ Python with mypy
+make deps-ts                     # check Node dependency usage with depcheck
+make deps-py                     # check Python dependency usage with deptry
+make check                       # run all lint, typecheck, and dependency checks
+make fix                         # apply available ESLint, markdownlint, and Ruff fixes
 
 # Build
-npm run build          # Compile TypeScript to JavaScript (dist)
+npm run build                    # compile TypeScript
+npm run start                    # run compiled output
 
-# Other
-npm run setup          # Initialize submodules and experiments environment
-npm run eval           # Run the experiments evaluation workflow
-npm run prepare        # Husky prepare (install git hooks)
+# Experiments / eval
+npm run setup                    # init submodules and sync experiments/ Python deps
+npm run eval                     # run deepeval tests in experiments/
+```
 
-# Make targets
-make check             # Run all checks (lint, typecheck, deps, etc.)
-make fix               # Apply automatic fixes
+## Architecture
+
+```mermaid
+graph TD
+  CLI["`script.ts` CLI"] -->|"filesystem / shell"| Runner["`lib/runner.ts`"]
+  Runner -->|"agent orchestration"| Agents["`lib/agents.ts`"]
+  Agents -->|"filesystem tools"| Tools["`lib/tools.ts`"]
+  CLI -->|"reads/writes"| Templates["`templates/`"]
+  CLI -->|"exec"| Gitingest["`gitingest` CLI"]
+  CLI -->|"API"| OpenAI["`OpenAI API`"]
+  CLI -->|"optional MCP"| Confluence["`Confluence`"]
 ```
 
 ## Constraints
 
 - **Generated files**: do not edit `dist/`, `build/`, or lock files directly
+- **Runtime**: use `Node.js >=22.0.0`
+- **System tools**: `gitingest` and `markdownlint-cli` must be installed for the workflow and checks described in the repo
+- **Experiments**: `experiments/` uses `uv` and Python tooling; `npm run setup` initializes submodules and syncs those dependencies
 
 ## Environment
 
-- **Required**: `Node` (engine: `>=22.0.0`), `npm`, Git
-- **Environment Variables**: `OPENAI_API_KEY` must be set for AI processing
-- **Setup**: bootstrap by installing dependencies and validating toolchain
-  - `npm install`
-  - Optional: `npm run setup` to initialize submodules and experiments
-  - Verify with `npm run check`
+- **Required**: set `OPENAI_API_KEY` before running AI-backed README processing or eval workflows
+- **Setup**: install `gitingest` with `pip install gitingest`; install `markdownlint-cli` with `npm install -g markdownlint-cli` or `brew install markdownlint-cli`
+- **Optional**: Confluence MCP integration is supported for external documentation sources
 
 ## Quality
 
-- **Tests**: Jest tests located at `script.spec.ts`; run with `npm test`
-- **Lint**: ESLint for TS/JS and markdownlint for Markdown; accessible via `make check` or individual targets
-- **CI**: Ensure unit tests and all checks pass as part of the normal workflow (see Makefile targets for lint/typecheck/deps/tests)
-- **Project structure references**: core code resides under `lib/` (agents, runner, tools) and `bin/`/`script.ts` for CLI entry points
+- **Tests**: Jest runs `script.spec.ts` via `npm test`; eval coverage lives under `experiments/` and runs with `npm run eval`
+- **Lint**: TypeScript uses `eslint`; Markdown uses `markdownlint`; Python in `experiments/` uses `ruff`
+- **CI**: the planned evaluation workflow installs Node, Python, and `uv`, then runs `npm run eval`; it requires `OPENAI_API_KEY` in repository secrets

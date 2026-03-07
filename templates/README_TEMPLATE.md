@@ -82,9 +82,11 @@ export API_KEY=your_key_here            # Required — authenticates requests to
 4. Start the service — see [Usage](#usage)
 -->
 
-### Commands
+### Development Commands
 
-> (Optional) Commands a developer will actually need to run. One fenced shell block, each line commented. Emphasive quality and validation checks like linters, tests, etc.
+> (Optional) Commands a developer will actually need to run. Infer from all task runners, build tools, and CI workflow steps present in the codebase.
+> One fenced shell block, each line commented. Emphasive quality and validation checks like linters, tests, etc.
+> Do not include end-user CLI invocations — those belong in Usage.
 
 <!-- EXAMPLE
 ```shell
@@ -99,6 +101,7 @@ make deploy       # deploy build
 ## Usage
 
 > Show how to interact with the project after it is running. Include only modes present in the codebase. If multiple modes exist, use one fenced block per mode with a bold label above each block.
+> Do not repeat development commands (start, test, lint) — those belong in Development Commands.
 >
 > **CLI / script** — A realistic invocation with real flags and inline comments. Include `--help` output or link to it.
 > **API** — SDK first if one exists. Then link OpenAPI/Swagger spec as primary REST reference. Show auth stub, one representative versioned call, and one error response shape. If no spec exists, link the primary route definition file and note the absence. Use `$BASE_URL` throughout — never hardcode URLs.
@@ -106,19 +109,11 @@ make deploy       # deploy build
 >
 > Show the minimal path from installation to a successful, verifiable output.
 
-<!-- EXAMPLE: Start 
-**Start**
+<!-- EXAMPLE: CLI
 ```shell
-# replace with actual start command and describe what it starts and where it listens
-npm run start
-```
--->
-
-<!-- EXAMPLE: CLI 
-```shell
-tool        # Triggers tool
-tool --foo  # Bar
-tool --help # List all commands
+<tool>               # describe default behavior
+<tool> --flag        # describe what flag does
+<tool> --help        # list all commands
 ```
 -->
 
