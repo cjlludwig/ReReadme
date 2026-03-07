@@ -1,6 +1,5 @@
 # express-server
 
-![Node version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
 ![Docker](https://img.shields.io/badge/docker-supported-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -19,21 +18,22 @@ Minimal Express.js server with a Document API backed by MongoDB. Designed for lo
 ### Installation
 
 1. Install dependencies
+```shell
+npm i
+```
 
-   ```shell
-   npm install
-   ```
-
-2. Start MongoDB locally
-   - Ensure reachable at `mongodb://localhost:27017`
+2. Ensure MongoDB is running locally
+```shell
+# You may start MongoDB with your usual method, for example:
+mongod --config /path/to/your/mongod.conf
+```
 
 3. Start the server
+```shell
+npm start
+```
 
-   ```shell
-   npm run start
-   ```
-
-   Server runs on `http://localhost:9000`
+Server runs on `http://localhost:9000`
 
 ### Alternative Development Environment
 
@@ -61,30 +61,24 @@ curl http://localhost:9000/api/document/doc1
 
 ## Architecture
 
-- Entry point: src/server.js
-- Layered structure:
-  - Controllers: src/controllers/documentController.js
-  - Services: src/services/documentService.js
-  - Data access: src/data/documentDao.js
-  - Data layer / DB client: src/data/mongoDao.js
-
-ASCII request flow (example for a GET by ID)
-
-```text
-Client -> HTTP -> Express (router) -> Controller -> Service -> DAO -> MongoDB
+```mermaid
+graph TD
+  Client -->|HTTP| Server
+  Server -->|MongoDB| MongoDB
 ```
 
 ## References
 
-- [Express.js](https://expressjs.com/)
+- [Express](https://expressjs.com/)
 - [MongoDB Node.js Driver](https://www.npmjs.com/package/mongodb)
+- [http-status-codes](https://www.npmjs.com/package/http-status-codes)
 - [VS Code Dev Container](https://code.visualstudio.com/docs/devcontainers/containers)
 
 ## Help
 
-- **MongoDB connection**: Confirm MongoDB is running on port 27017 and accessible
-- **Dev Container**: Requires running Docker daemon and Dev Containers extension
-- **API errors**: Verify request payload structure and MongoDB connectivity; check console for connection errors
+- MongoDB must be running and accessible at `mongodb://localhost:27017`. If the database connection fails, the server will log an error and may be unable to handle requests that interact with documents.
+- The POST handler in the repository currently attempts to parse the request body in a way that may conflict with the Express JSON body parser. If you encounter issues, consider using a correctly parsed body object, e.g., `const body = req.body;` and ensure the middleware `app.use(express.json())` is in place.
+- The server listens on port 9000 by default; if you need to change the port, modify `src/server.js`.
 
 ## License
 

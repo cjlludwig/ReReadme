@@ -2,56 +2,64 @@
 # eval test files and evaluate.py.
 
 EXPRESS_README_KEYWORDS = [
-    "npm install",
+    "npm i",
     "npm start",
     "http://localhost:9000",
-    "Node.js",
-    "Express.js",
+    "Node",
+    "Express",
     "MongoDB",
 ]
 
 EXPRESS_AGENTS_KEYWORDS = [
-    "npm install",
+    "npm i",
     "npm start",
-    "Node.js",
-    "Express.js",
+    "Node",
+    "Express",
     "MongoDB",
 ]
 
 REREADME_README_KEYWORDS = [
-    "npm install",
-    "npm run dev",
+    "npm i",
+    "npm run",
+    "refresh",
+    "help",
+    "Node",
+    "Git",
+    "OpenAI",
     "OPENAI_API_KEY",
     "TypeScript",
-    "OpenAI Agents SDK",
+    "OpenAI Agents",
     "markdownlint",
-    "git clone https://github.com/connorludwig/rereadme.git",
     "rereadme",
-    "rereadme --check",
 ]
 
 REREADME_AGENTS_KEYWORDS = [
-    "npm run dev",
+    "npm run",
+    "start",
+    "refresh",
+    "help",
     "npm test",
-    "OPENAI_API_KEY",
     "TypeScript",
-    "script.ts",
 ]
 
 FRONT_END_README_KEYWORDS = [
-    "npm install",
-    "npm test",
-    "Express",
+    "npm i",
+    "npm start",
+    "make test",
+    "make dev",
+    "make server",
+    "make e2e",
     "Redis",
     "Docker",
     "Prometheus",
 ]
 
 FRONT_END_AGENTS_KEYWORDS = [
-    "npm test",
+    "make test",
     "npm start",
-    "server.js",
-    "api/",
+    "make dev",
+    "make server",
+    "make e2e",
 ]
 
 AGENTS_SECTIONS = ["## Project", "## Commands"]

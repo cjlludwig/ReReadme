@@ -243,8 +243,14 @@ async function lintAndFix(filePath: string): Promise<void> {
   if (fixed !== content) {
     await fs.writeFile(filePath, fixed)
   }
-  if (errors.some(e => !e.fixInfo)) {
+  const unfixable = errors.filter(e => !e.fixInfo)
+  if (unfixable.length > 0) {
     log.warn(`Some markdown issues in ${filePath} may need manual fixing`)
+    for (const e of unfixable) {
+      const rule = e.ruleNames[0] ?? ''
+      const detail = e.errorDetail ? `  ${e.errorDetail}` : ''
+      log.detail(`  line ${e.lineNumber}  ${rule}  ${e.ruleDescription}${detail}`)
+    }
   }
 }
 
@@ -320,6 +326,7 @@ export async function runWorkflow(): Promise<void> {
 
     // Write README
     log.step(`Writing ${OUTPUT_FILE}`)
+    const outputFileExisted = await fs.pathExists(OUTPUT_FILE)
     await updateReadme(readmeContent)
 
     // Write AGENTS.md if requested
@@ -358,6 +365,10 @@ export async function runWorkflow(): Promise<void> {
     }
 
     await formatReadme()
+
+    const project = readmeContent.match(/^#\s+(.+)$/m)?.[1]?.trim()
+    const action = outputFileExisted ? 'Updated' : 'Created'
+    log.info(`${action}${project ? ` ${project}` : ''} ${OUTPUT_FILE}`)
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     log.outro(`Done in ${elapsed}s`)

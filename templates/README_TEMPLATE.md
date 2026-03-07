@@ -30,18 +30,32 @@ Use the repo's own metadata for labels and colors — do not invent version numb
 
 ### Dependencies
 
-> Bulleted list of prerequisites NOT installed by the package manager:
-> - Runtime and version (e.g. `Node.js >= 18`, `Python 3.11 via pyenv`)
-> - External services with default connection string (e.g. MongoDB on `localhost:27017`)
-> - Optional tooling on its own line, marked `(optional)` (e.g. Docker + VS Code Dev Containers extension)
+> (Optional) Bulleted list of prerequisites not managed by the package manager. Infer from runtime config, CI, and service definitions — not import statements.
+>
+> - Runtimes with minimum version (e.g. `Node.js >= 22`, `Python >= 3.11`)
+> - External services with default local connection string (e.g. `MongoDB` — `localhost:27017`)
+> - System tools required before install (e.g. `uv`, `docker`)
+> - Optional prerequisites on their own line marked `(optional)`
+>
+> Omit anything installed by the package manager. If no external prerequisites exist, omit this section.
+
+<!-- EXAMPLE
+- `Node.js >= 22`
+- `MongoDB` — `localhost:27017`
+- `Docker` (optional) — required for local dev setup
+-->
 
 ### Environment Variables
 
-> (Optional) If environment variables are required to run. Include optional vars that are common as well.
+> List all environment variables required or commonly used. Infer from config files, `.env.example`, and explicit `process.env` references — not comments or docs.
+> Format as a shell export block with inline comments. Mark optional vars with `# optional`.
+> Omit this section if no environment variables are used.
 
 <!-- EXAMPLE
 ```shell
-export API_KEY=foo # Used for ...
+export PORT=3000                        # Port the server listens on
+export SESSION_REDIS=redis://localhost  # optional — enables Redis-backed sessions, defaults to in-memory
+export API_KEY=your_key_here            # Required — authenticates requests to upstream service
 ```
 -->
 
@@ -68,6 +82,20 @@ export API_KEY=foo # Used for ...
 4. Start the service — see [Usage](#usage)
 -->
 
+### Commands
+
+> (Optional) Commands a developer will actually need to run. One fenced shell block, each line commented. Emphasive quality and validation checks like linters, tests, etc.
+
+<!-- EXAMPLE
+```shell
+npm run start     # start the application
+npm run test      # run test suite — must pass before committing
+npm run lint      # lint — must pass before committing
+make build        # build project for deploy
+make deploy       # deploy build
+``` 
+-->
+
 ## Usage
 
 > Show how to interact with the project after it is running. Include only modes present in the codebase. If multiple modes exist, use one fenced block per mode with a bold label above each block.
@@ -78,17 +106,25 @@ export API_KEY=foo # Used for ...
 >
 > Show the minimal path from installation to a successful, verifiable output.
 
-<!-- EXAMPLE STRUCTURE — do not reproduce literally -->
+<!-- EXAMPLE: Start 
 **Start**
 ```shell
 # replace with actual start command and describe what it starts and where it listens
 npm run start
 ```
+-->
 
-**API**
+<!-- EXAMPLE: CLI 
+```shell
+tool        # Triggers tool
+tool --foo  # Bar
+tool --help # List all commands
+```
+-->
 
+<!-- EXAMPLE: API - If no spec found: link primary route definitions e.g. [`src/routes/widgets.ts`](./src/routes/widgets.ts)
 API reference: [Swagger UI](http://localhost:PORT/docs) · [`openapi.yaml`](./openapi.yaml)
-<!-- If no spec found: link primary route definitions e.g. [`src/routes/widgets.ts`](./src/routes/widgets.ts) -->
+
 ```shell
 # Local development
 export BASE_URL=http://localhost:3000
@@ -111,15 +147,16 @@ curl -X POST $BASE_URL/v1/widgets \
 # HTTP 422
 # {"error": "validation_failed", "fields": {"name": "required"}}
 ```
+-->
 
-**Library**
+<!-- EXAMPLE: Library 
 ```js
 import foo from "<package-name>";
 
 const client = foo({ option: "value" });
 client.method(args); // describe what this does
 ```
-<!-- END EXAMPLE STRUCTURE -->
+-->
 
 ## Architecture
 

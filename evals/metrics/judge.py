@@ -28,7 +28,7 @@ TEMPLATE_ADHERENCE_SYSTEM_PROMPT = """You are an LLM judge evaluating a generate
 Criteria:
 - Coverage: Does the README contain all sections requested in the template?
 - Alignment: Does the README follow the content descriptions and formatting of the template?
-- Completeness: Is content appropriately filled out, with no unfilled placeholders, leftover comments, or obvious contradictions?
+- Completeness: Is content appropriately filled out, with no unfilled placeholders, leftover comments, or obvious contradictions? Ex: `> Section description`, `<!-- EXAMPLE`
 
 Verdict: PASS if all criteria are met. FAIL if any criterion has a significant deficiency.
 

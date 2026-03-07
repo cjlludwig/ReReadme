@@ -5,8 +5,14 @@
 ![Build](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
 
 ## Description
+  
+`rereadme` is a CLI tool that refreshes `README.md` files by analyzing a repository and generating an updated README from a template using a multi-agent workflow built on the OpenAI Agents SDK. It supports both a full regeneration mode and a PR-friendly CI mode that analyzes diffs and produces targeted patch suggestions.
 
-The rereadme CLI tool automatically refreshes README.md files by analyzing the repository and processing findings with AI. It uses a multi-agent architecture (Researcher → DetailFetcher → TemplateEnforcer) powered by the OpenAI Agents SDK to explore a codebase, distill the discovered context into a polished README, and apply a consistent structure.
+<!-- markdownlint-disable -->
+<div align="center">
+   <img src="docs/assets/demo-small.gif" alt="rereadme demo" />
+</div>
+<!-- markdownlint-enable -->
 
 ## Getting Started
 
@@ -181,7 +187,9 @@ The tool is built using:
 
 ## Quality
 
-LLMs are inherently non-deterministic, so rereadme takes a two-layer approach to agent quality. Tool calls are tested explicitly in the Jest unit suite to assert allowed filesystem actions and path boundaries — the deterministic, security-critical behavior that must hold on every run. General output quality — structure, accuracy, completeness — is validated through a DeepEval eval framework that runs rereadme against real dataset repos and compares output against golden READMEs using both deterministic checks and an LLM-as-judge metric.
+LLMs are inherently non-deterministic, so rereadme takes a two-layer approach to agent quality. Tool calls are tested explicitly in the Jest unit suite to assert allowed filesystem actions and path boundaries — the deterministic, security-critical behavior that must hold on every run.
+
+General output quality — structure, accuracy, completeness — is validated through a DeepEval eval framework that runs rereadme against real dataset repos and compares output against golden READMEs using both deterministic checks and an LLM-as-judge metric.
 
 See [evals/README.md](evals/README.md) for setup, metrics, and the golden README workflow.
 
