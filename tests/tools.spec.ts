@@ -197,14 +197,6 @@ describe("read_files", () => {
     })
 })
 
-describe("diffTools export", () => {
-    it("should export diffTools array", async () => {
-        expect(tools.diffTools).toBeDefined()
-        expect(Array.isArray(tools.diffTools)).toBe(true)
-        expect(tools.diffTools.length).toBe(4)
-    })
-})
-
 describe("security: shell injection prevention", () => {
     it("search_code: glob with shell breakout characters returns no matches, not RCE", async () => {
         const injectionFile = '/tmp/rereadme-injection-test'

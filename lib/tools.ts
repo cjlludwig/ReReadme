@@ -235,8 +235,6 @@ export const readFiles = tool({
   },
 });
 
-export const allTools = [listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles];
-
 export const gitDiffStat = tool({
   name: 'git_diff_stat',
   description:
@@ -310,5 +308,3 @@ export const gitDiff = tool({
     }
   },
 });
-
-export const diffTools = [gitDiffStat, gitLog, gitDiff, readFile];
