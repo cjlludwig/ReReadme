@@ -86,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: cjlludwig/ReReadme@v0.0.2
+      - uses: cjlludwig/ReReadme@v0.0.3
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
 # ⚠️ README-suggestions.md written on drift
