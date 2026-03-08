@@ -1,7 +1,7 @@
 import { Agent } from '@openai/agents';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { z } from 'zod';
-import { listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles, diffTools } from './tools.js';
+import { listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles, gitDiff, gitLog, gitDiffStat } from './tools.js';
 
 export const DiffAnalysisSchema = z.object({
   significant: z.boolean().describe('Whether this diff warrants a README update'),
@@ -52,56 +52,49 @@ export function createDiffAgents(model: string) {
     name: 'DiffAnalyzer',
     model,
     outputType: DiffAnalysisSchema,
-    tools: diffTools,
+    tools: [gitDiffStat, gitLog, gitDiff, readFiles, searchCode, getStructure, getFileTree],
     instructions: `You are a precise diff analysis agent. Your job is to determine whether a git diff warrants a README update and what specifically changed.
 
 Workflow:
 1. Call git_diff_stat to see which files changed and line counts
 2. Call git_log to understand commit intent
 3. Call git_diff (optionally with pathFilter for large diffs) to read the actual changes
-4. If diff is truncated, call read_file on individual changed files for more context
+4. If diff is truncated, call read_files or search_code on changed files for more context
 5. Return structured analysis
 
 Classify changes by signal level in strict priority order:
 
-HIGH signal (always significant=true):
+HIGH signal (significant=true):
+- Breaking changes to existing functionality
 - New or changed CLI flags / options
-- New or changed environment variables
-- New or changed API endpoints
-- New or changed installation steps
+- New or changed required environment variables
+- New or changed installation or setup steps
 - New or changed required dependencies
-- New or changed user-facing entry points (e.g. binary/executable definitions, new top-level commands)
-- New or changed architecture components
+- New or changed user-facing entry points (e.g. binary/executable definitions, top-level commands)
+- New or breaking API version change (e.g. api/v2)
+- Major architectural changes that affect how users integrate with the system
 
-MEDIUM signal (evaluate carefully — only significant=true if user-visible behavior changed):
-- New exported public API
-- Significant behavior changes visible to end users
-- Net-new user-facing capabilities that do not map to any existing README section — the change
-  is significant but the user must decide if and where to document it, so it is not urgent
+MEDIUM signal (significant=true ONLY if it changes what a first-time reader must know to use the project):
+- New capabilities that require new setup, configuration, or usage patterns not covered anywhere in the README
+- Behavior changes that invalidate existing README instructions or examples
 
 LOW signal (significant=false):
-- Test-only changes (new tests, test reorganization, test coverage improvements, test infrastructure)
-- CI/CD configuration changes
-- Dependency version bumps with no API change
-- Internal refactors with no public API change, including:
-  - Extracting internal modules/utilities not exposed as CLI flags or user-facing APIs
-  - Moving code between files with no change to CLI flags, env vars, or public behavior
-- Type annotation or type system fixes with no runtime behavior change (e.g. TypeScript types, Python type hints)
-- Documentation-only changes (already in README)
-- Code style / formatting changes
-- New or changed developer-only package scripts (e.g. eval:*, test:*, lint:*) that are not
-  in the binary/executable entry point field and have no user-facing CLI impact
-- Changes to internal AI agent instructions or system prompts where no CLI flags,
-  output schemas, or user-visible behavior change
-- New or changed internal spec, design, or planning documents (e.g. docs/specs/, docs/plans/,
-  implementation notes) — these describe developer intent and may reference existing CLI flags,
-  but are not user-impacting changes
+- Net-new features, endpoints, or logic that work within the existing setup — users discover these via docs, changelogs, or code, not the README
+- New exported APIs or modules that don't change CLI, env vars, or setup
+- Test changes, CI/CD, internal refactors, type fixes, style changes
+- Dependency bumps with no user-visible API change
+- New developer-only scripts not exposed as CLI entry points
+- Internal agent instructions, specs, or planning documents
+- Documentation-only changes already reflected in README
 
-Cross-check for false positives: if you see new options / configs / interfaces referenced, validate that
-they are not just new references of pre-existing logic.
+README relevance test (apply before marking significant=true at any level):
+  - Would a first-time reader cloning this repo need this information to successfully install, configure, or run the project? If no → significant=false.
 
-Conservative default: when in doubt, lean toward significant=false.
-Only mark significant=true when there is clear evidence of user-impacting changes.`,
+Cross-check for false positives:
+ - if you see new options / configs / interfaces referenced, validate that they are not just new references of pre-existing logic.
+
+Conservative default: 
+- when in doubt, lean toward significant=false.`,
   });
 
   const readmePatcher = new Agent({
@@ -121,6 +114,58 @@ Rules:
   });
 
   return { diffAnalyzer, readmePatcher };
+}
+
+/** 
+ * Active single-agent pipeline: ReadmeWriter → (AgentsDocWriter?) 
+ */
+export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
+  const agentsDocWriter = agentsTemplate
+    ? new Agent({
+        name: 'AgentsDocWriter',
+        model,
+        instructions: `You are a technical writer specializing in AGENTS.md documentation. Using the README content provided in the conversation and provided tools, generate a complete AGENTS.md file.
+
+${TEMPLATE_RULES}
+
+AGENTS.md Template:
+\`\`\`\`\`\`markdown
+${agentsTemplate}
+\`\`\`\`\`\`
+
+Additional rules:
+- Target < 100 lines in final output — every line must earn its place
+- Only include information supported by the provided README content — do not fabricate content
+- Omit any section where nothing concrete was found
+- Your entire output must be ONLY the raw AGENTS.md markdown — no preamble, no closing commentary, no wrapping code fences`,
+    tools: [getFileTree, readFiles, searchCode, getStructure],
+    handoffDescription: 'Write the AGENTS.md using accumulated context and available tools.',
+      })
+    : undefined;
+
+  const readmeWriter = new Agent({
+    name: 'ReadmeWriter',
+    model,
+    instructions: `You are a technical doc writer, specializing in README documentation. Using the template and tools provided, write a complete README.md file that adheres to the conventions in the provided template.
+
+Iterate through the template sections one by one and use the tools provided to find the information to complete the section.
+
+${TEMPLATE_RULES}
+
+README Template:
+\`\`\`\`\`\`markdown
+${readmeTemplate}
+\`\`\`\`\`\`
+
+Additional rules:
+- Use clear, concise language for a developer audience.
+- Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
+- READMEs are written in third-person neutral for descriptions and second-person imperative for instructions, addressed to a developer evaluating or adopting the project. Ensure output is aligned.
+- Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
+    tools: [getFileTree, readFiles, searchCode, getStructure],
+  });
+
+  return { readmeWriter, agentsDocWriter };
 }
 
 /**
@@ -206,56 +251,4 @@ When done, output your findings as a structured technical summary using the exac
   detailFetcher.handoffs = [templateEnforcer];
 
   return { researcher, templateEnforcer, detailFetcher };
-}
-
-/** 
- * Active single-agent pipeline: ReadmeWriter → (AgentsDocWriter?) 
- */
-export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
-  const agentsDocWriter = agentsTemplate
-    ? new Agent({
-        name: 'AgentsDocWriter',
-        model,
-        instructions: `You are a technical writer specializing in AGENTS.md documentation. Using the README content provided in the conversation and provided tools, generate a complete AGENTS.md file.
-
-${TEMPLATE_RULES}
-
-AGENTS.md Template:
-\`\`\`\`\`\`markdown
-${agentsTemplate}
-\`\`\`\`\`\`
-
-Additional rules:
-- Target < 100 lines in final output — every line must earn its place
-- Only include information supported by the provided README content — do not fabricate content
-- Omit any section where nothing concrete was found
-- Your entire output must be ONLY the raw AGENTS.md markdown — no preamble, no closing commentary, no wrapping code fences`,
-    tools: [getFileTree, readFiles, searchCode, getStructure],
-    handoffDescription: 'Write the AGENTS.md using accumulated context and available tools.',
-      })
-    : undefined;
-
-  const readmeWriter = new Agent({
-    name: 'ReadmeWriter',
-    model,
-    instructions: `You are a technical doc writer, specializing in README documentation. Using the template and tools provided, write a complete README.md file that adheres to the conventions in the provided template.
-
-Iterate through the template sections one by one and use the tools provided to find the information to complete the section.
-
-${TEMPLATE_RULES}
-
-README Template:
-\`\`\`\`\`\`markdown
-${readmeTemplate}
-\`\`\`\`\`\`
-
-Additional rules:
-- Use clear, concise language for a developer audience.
-- Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
-- READMEs are written in third-person neutral for descriptions and second-person imperative for instructions, addressed to a developer evaluating or adopting the project. Ensure output is aligned.
-- Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
-    tools: [getFileTree, readFiles, searchCode, getStructure],
-  });
-
-  return { readmeWriter, agentsDocWriter };
 }
