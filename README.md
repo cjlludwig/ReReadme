@@ -20,9 +20,8 @@ In most engineering organizations, distributed systems READMEs are stale at best
 
 That economic model does not scale in an AI-assisted development environment.
 
-Headless coding agents now interact with your repository repeatedly. Each session must reconstruct context that should already exist in a well-written README: architectural boundaries, service responsibilities,
-deployment constraints, domain assumptions. Without it, agents navigate blindly — reading files, inferring structure, repeating the cycle. A realistic orientation pass for a non-trivial service often consumes
-**150,000–600,000 tokens per session**. If documentation is stale or missing, that cost repeats every time an agent session begins.
+Headless coding agents now interact with your repository repeatedly. Each session must reconstruct context that should already exist in a well-written README. Without it, agents navigate blindly attempting to gather context. A realistic orientation pass for a non-trivial service often consumes
+**>10,000 tokens per session**. If documentation is stale or missing, that cost repeats every time an agent session begins.
 
 > Pay once to persist context. Or pay repeatedly to rediscover it.
 
@@ -198,18 +197,13 @@ Template requirements:
 ## Architecture
 
 > For local setup, development workflow, and contribution standards, see [Development](docs/development.md).
+> See [Observability](docs/observability.md) for more details on the agentic workflow.
 
 The tool is built using:
 
 - **OpenAI Agents SDK** — AI-driven README generation and diff analysis with full tracing support
 - **Google ZX** — Shell operations and CLI orchestration
 - **TypeScript** — Type-safe development with modern JavaScript features
-
-```mermaid
-graph LR
-    A[rereadme] --> B[ReadmeWriter] --> C[README.md]
-    D[rereadme --ci] --> E[DiffAnalyzer] -->|significant| F[ReadmePatcher] --> G[README-suggestions.md]
-```
 
 ## Quality
 
