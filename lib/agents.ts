@@ -73,6 +73,7 @@ HIGH signal (significant=true):
 - New or changed user-facing entry points (e.g. binary/executable definitions, top-level commands)
 - New or breaking API version change (e.g. api/v2)
 - Major architectural changes that affect how users integrate with the system
+- Removal or disabling of any feature, option, command, env var, or behavior currently documented in the README
 
 MEDIUM signal (significant=true ONLY if it changes what a first-time reader must know to use the project):
 - New capabilities that require new setup, configuration, or usage patterns not covered anywhere in the README
@@ -88,7 +89,8 @@ LOW signal (significant=false):
 - Documentation-only changes already reflected in README
 
 README relevance test (apply before marking significant=true at any level):
-  - Would a first-time reader cloning this repo need this information to successfully install, configure, or run the project? If no → significant=false.
+  - Removals/disabling: Is this feature, flag, command, or behavior currently documented in the README? If yes → significant=true.
+  - Additions/changes: Would a first-time reader cloning this repo need this information to successfully install, configure, or run the project? If no → significant=false.
 
 Cross-check for false positives:
  - if you see new options / configs / interfaces referenced, validate that they are not just new references of pre-existing logic.
