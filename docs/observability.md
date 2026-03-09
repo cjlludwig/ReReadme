@@ -8,9 +8,7 @@ Each rereadme run produces one trace per workflow. The agents you will see by na
 
 **Standard workflow (`rereadme`):**
 
-- `Researcher` — repo exploration and context gathering
-- `DetailFetcher` — targeted follow-up queries (when Researcher hands off for a missing fact)
-- `TemplateEnforcer` — README generation from accumulated context
+- `ReadmeWriter` — repo exploration, context gathering, and README generation in a single pass
 - `AgentsDocWriter` — agents doc generation (only when `--agents` is passed)
 
 **CI workflow (`rereadme --ci`):**
@@ -34,8 +32,7 @@ For setup steps and filtering options, see the [OpenAI tracing guide](https://op
 
 Traces are most useful when a run produces unexpected output:
 
-- **Agent skipped a section** — check the `Researcher` span; look at which files were read and whether the relevant file was accessed
-- **Handoff happened unexpectedly** — inspect the `TemplateEnforcer` span to see what triggered the handoff to `DetailFetcher`
+- **Agent skipped a section** — check the `ReadmeWriter` span; look at which files were read and whether the relevant file was accessed
 - **CI mode did not flag a change** — check the `DiffAnalyzer` span and its structured output for `signalLevel` and `significanceReason`
 - **Run was slow** — span latencies show where time was spent (typically the largest model inference call)
 
