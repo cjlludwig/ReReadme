@@ -1,6 +1,6 @@
 {
   "name": "rereadme",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "description": "CLI tool to refresh README automatically with up-to-date information based on code contents, documents, and external sources",
   "type": "module",
   "bin": {
@@ -24,6 +24,8 @@
     "type": "git",
     "url": "git+https://github.com/connorludwig/rereadme.git"
   },
+  "publishConfig": { "access": "public" },
+
   "scripts": {
     "dev": "tsx ./script.ts",
     "build": "tsc",
