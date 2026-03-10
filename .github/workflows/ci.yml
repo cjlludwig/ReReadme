@@ -30,3 +30,24 @@ jobs:
         env:
           OPENAI_API_KEY: foo
           # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - run: npm ci
+
+      - name: Pack and install from tarball
+        run: |
+          npm pack
+          npm install -g ./rereadme-*.tgz
+
+      - name: Smoke test CLI
+        run: rereadme --help
+        env:
+          OPENAI_API_KEY: foo

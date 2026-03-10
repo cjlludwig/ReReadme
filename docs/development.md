@@ -90,6 +90,29 @@ The **pre-commit hook** (installed automatically by `npm install` via husky) run
 
 A **PostToolUse hook** in `.claude/settings.json` runs `make check` after every file write or edit when working with Claude Code.
 
+## Releases
+
+Releases are triggered by bumping the version in `package.json` and pushing to `main`. The publish CI workflow detects the version change and handles everything automatically.
+
+**To cut a release:**
+
+```shell
+npm version patch   # 1.0.0 → 1.0.1  (bug fixes)
+npm version minor   # 1.0.0 → 1.1.0  (new features, backwards-compatible)
+npm version major   # 1.0.0 → 2.0.0  (breaking changes)
+git tag -d vX.Y.Z  # discard the local tag — CI creates it
+git push
+```
+
+`npm version` updates `package.json` and commits the change automatically. The push to `main` triggers `.github/workflows/publish.yml`, which:
+
+1. Publishes the package to npm with provenance attestation
+2. Creates git tags `vX.Y.Z` and floating `vX`
+3. Creates a GitHub Release with auto-generated notes from merged PR titles
+4. Commits a version bump to `.github/workflows/readme-ci.yml` so this repo uses the version it just released
+
+Verify the release at `https://www.npmjs.com/package/rereadme` and the GitHub Releases tab.
+
 ## Standards
 
 - **TypeScript** — typescript-eslint recommended + type-checked rules; no implicit `any`

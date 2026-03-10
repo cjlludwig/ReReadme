@@ -16,15 +16,16 @@
   ],
   "author": "Connor Ludwig",
   "license": "MIT",
-  "homepage": "https://github.com/connorludwig/rereadme#readme",
+  "homepage": "https://github.com/cjlludwig/rereadme#readme",
   "bugs": {
-    "url": "https://github.com/connorludwig/rereadme/issues"
+    "url": "https://github.com/cjlludwig/rereadme/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/connorludwig/rereadme.git"
+    "url": "git+https://github.com/cjlludwig/rereadme.git"
   },
-  "publishConfig": { "access": "public" },
+  "files": ["bin/", "lib/", "script.ts", "templates/", ".markdownlint.jsonc"],
+  "publishConfig": { "access": "public", "provenance": true },
 
   "scripts": {
     "dev": "tsx ./script.ts",
@@ -43,7 +44,7 @@
     "eval:report": "cd evals && NO_COLOR=1 uv run python evaluate.py",
     "eval:ci": "cd evals && uv run pytest test_ci_mode.py -v",
     "eval:all": "cd evals && uv run pytest -v",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@clack/prompts": "1.0.1",
@@ -51,7 +52,7 @@
     "globby": "16.1.1",
     "markdownlint": "0.40.0",
     "picocolors": "1.1.1",
-    "typescript": "5.9.3",
+    "tsx": "4.21.0",
     "zod": "4.3.6",
     "zx": "8.8.5"
   },
@@ -67,7 +68,8 @@
     "husky": "^9.1.7",
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
-    "tsx": "^4.21.0",
+    "publint": "^0.3.12",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.56.0"
   },
   "engines": {
