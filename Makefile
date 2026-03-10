@@ -1,4 +1,4 @@
-.PHONY: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py test check fix
+.PHONY: lint-ts lint-md lint-py lint-pkg typecheck-ts typecheck-py deps-ts deps-py test check fix
 
 -include local/Makefile
 
@@ -14,6 +14,10 @@ lint-py:
 	@echo "==> Ruff"
 	cd evals && uv run ruff check .
 
+lint-pkg:
+	@echo "==> publint"
+	npx publint
+
 typecheck-ts:
 	@echo "==> tsc --noEmit"
 	npx tsc --noEmit
@@ -28,16 +32,16 @@ test:
 
 deps-ts:
 	@echo "==> depcheck"
-	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core,markdownlint-cli" --ignore-patterns="dist,evals"
+	npx depcheck --ignores="depcheck,@types/fs-extra,@jest/globals,@openai/agents-core,markdownlint-cli,publint" --ignore-patterns="dist,evals"
 
 deps-py:
 	@echo "==> deptry"
 	cd evals && uv run deptry .
 
-pre-commit: lint-py typecheck-ts typecheck-py deps-ts deps-py
+pre-commit: lint-pkg lint-py typecheck-ts typecheck-py deps-ts deps-py
 	@echo "==> All checks passed"
 
-check: lint-ts lint-md lint-py typecheck-ts typecheck-py deps-ts deps-py
+check: lint-ts lint-md lint-py lint-pkg typecheck-ts typecheck-py deps-ts deps-py
 	@echo "==> All checks passed"
 
 fix:

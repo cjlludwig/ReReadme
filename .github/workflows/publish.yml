@@ -1,0 +1,99 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push tags and self-update commit
+      id-token: write   # required for npm provenance attestation
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # required to push tags
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+
+      - name: Lint package
+        run: npx publint
+
+      - name: Check if version changed
+        id: version_check
+        run: |
+          LOCAL=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view rereadme version 2>/dev/null || echo "0.0.0")
+          echo "local=$LOCAL" >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
+          if [ "$LOCAL" = "$PUBLISHED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enforce pack size < 500 kB
+        if: steps.version_check.outputs.changed == 'true'
+        run: |
+          npm pack
+          TARBALL=$(ls rereadme-*.tgz)
+          SIZE=$(stat -c%s "$TARBALL")
+          echo "Pack size: ${SIZE} bytes"
+          rm "$TARBALL"
+          [ "$SIZE" -lt 512000 ] || (echo "ERROR: ${SIZE} bytes exceeds 500 kB limit" && exit 1)
+
+      - name: Publish dry run
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.version_check.outputs.changed == 'true'
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Tag release
+        if: steps.version_check.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.version_check.outputs.local }}
+        run: |
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "v${VERSION}"
+          git tag -f "v${MAJOR}"
+          git push origin "v${VERSION}"
+          git push origin "v${MAJOR}" --force
+
+      - name: Create GitHub Release
+        if: steps.version_check.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.version_check.outputs.local }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --generate-notes
+
+      - name: Update readme-ci.yml to new version
+        if: steps.version_check.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.version_check.outputs.local }}
+        run: |
+          sed -i "s|cjlludwig/ReReadme@v[0-9]*\.[0-9]*\.[0-9]*|cjlludwig/ReReadme@v${VERSION}|g" \
+            .github/workflows/readme-ci.yml
+          git add .github/workflows/readme-ci.yml
+          git diff --cached --quiet || git commit -m "chore: update GHA ref to v${VERSION} [skip ci]"
+          git pull --rebase
+          git push
