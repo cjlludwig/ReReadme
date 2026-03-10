@@ -4,7 +4,7 @@
   "description": "CLI tool to refresh README automatically with up-to-date information based on code contents, documents, and external sources",
   "type": "module",
   "bin": {
-    "rereadme": "./bin/rereadme.js"
+    "rereadme": "bin/rereadme.js"
   },
   "keywords": [
     "readme",
@@ -24,9 +24,17 @@
     "type": "git",
     "url": "git+https://github.com/cjlludwig/rereadme.git"
   },
-  "files": ["bin/", "lib/", "script.ts", "templates/", ".markdownlint.jsonc"],
-  "publishConfig": { "access": "public", "provenance": true },
-
+  "files": [
+    "bin/",
+    "lib/",
+    "script.ts",
+    "templates/",
+    ".markdownlint.jsonc"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "tsx ./script.ts",
     "build": "tsc",
