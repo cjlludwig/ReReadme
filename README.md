@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Build](https://github.com/cjlludwig/ReReadme/actions/workflows/ci.yml/badge.svg)
 ![Last Commit](https://img.shields.io/github/last-commit/cjlludwig/ReReadme)
-[![npm](https://img.shields.io/npm/v/rereadme)](https://www.npmjs.com/package/rereadme)
+[![npm](https://img.shields.io/npm/v/%40cjlludwig%2Frereadme)](https://www.npmjs.com/package/@cjlludwig/rereadme)
 
 `rereadme` is a CLI tool that refreshes `README.md` files by analyzing a repository and generating an updated README from a template using an AI agent workflow built on the OpenAI Agents SDK. It supports both a full regeneration mode and a PR-friendly CI mode that analyzes diffs and produces targeted patch suggestions.
 

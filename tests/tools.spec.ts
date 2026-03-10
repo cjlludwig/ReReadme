@@ -29,7 +29,7 @@ describe("list_directory", () => {
 describe("read_file", () => {
     it("should read file contents", async () => {
         const result = await invokeTool(tools.readFile, { path: 'package.json' })
-        expect(result).toContain('"name": "rereadme"')
+        expect(result).toContain('"name": "@cjlludwig/rereadme"')
     })
 
     it("should truncate at maxLines", async () => {
@@ -170,7 +170,7 @@ describe("read_files", () => {
         const result = await invokeTool(tools.readFiles, { paths: ['package.json', 'lib/tools.ts'] })
         expect(result).toContain('### package.json')
         expect(result).toContain('### lib/tools.ts')
-        expect(result).toContain('"name": "rereadme"')
+        expect(result).toContain('"name": "@cjlludwig/rereadme"')
     })
 
     it("should return access denied for gitignored paths", async () => {
