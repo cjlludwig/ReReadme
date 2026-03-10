@@ -54,14 +54,10 @@ jobs:
       - name: Publish dry run
         if: steps.version_check.outputs.changed == 'true'
         run: npm publish --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         if: steps.version_check.outputs.changed == 'true'
         run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag release
         if: steps.version_check.outputs.changed == 'true'
