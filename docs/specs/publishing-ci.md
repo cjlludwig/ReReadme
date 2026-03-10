@@ -9,33 +9,38 @@ Automated GHA workflow that publishes the npm package and updates GHA version ta
 | Release trigger | Manual version bump in `package.json` → push to `main` | Explicit, no extra tooling, deterministic |
 | GHA tag strategy | Exact `vX.Y.Z` + floating `vX` major tag | Standard GitHub Marketplace convention |
 | Self-update | Yes — auto-commit `readme-ci.yml` version update | Dogfoods the action on every release |
+| Package scope | `@cjlludwig/rereadme` (scoped) | Unscoped `rereadme` was published and unpublished in 2021 by another user; npm permanently holds the name |
 
 ## Prerequisites (package.json fixes required before first publish)
 
 These must be fixed before the workflow can succeed. See the pre-publish checklist:
 
-1. **Add `files` whitelist** — package currently packs 50.5 MB (includes `evals/` datasets). Add to `package.json`:
+1. **Rename package to `@cjlludwig/rereadme`** — the unscoped `rereadme` name is permanently squatted (unpublished 2021-12-15). Update `package.json`:
+   ```json
+   "name": "@cjlludwig/rereadme"
+   ```
+3. **Add `files` whitelist** — package currently packs 50.5 MB (includes `evals/` datasets). Add to `package.json`:
    ```json
    "files": ["bin/", "lib/", "script.ts", "templates/", ".markdownlint.jsonc"]
    ```
-2. **Move `tsx` to `dependencies`** — `bin/rereadme.js` spawns it at runtime; it's currently in `devDependencies`
-3. **Move `typescript` to `devDependencies`** — not used at runtime (tsx uses esbuild internally)
-4. **Fix `prepare` script** — `"prepare": "husky"` fails for users installing the package without a `.git` dir; change to `"prepare": "husky || true"`
-5. ~~**Add `LICENSE` file**~~ — **Done** (commit `be8ed1d`)
-6. **Add `provenance: true` to `publishConfig`** — `publishConfig` exists (`"access": "public"`) but is missing `provenance: true`. Update to:
+4. **Move `tsx` to `dependencies`** — `bin/rereadme.js` spawns it at runtime; it's currently in `devDependencies`
+5. **Move `typescript` to `devDependencies`** — not used at runtime (tsx uses esbuild internally)
+6. **Fix `prepare` script** — `"prepare": "husky"` fails for users installing the package without a `.git` dir; change to `"prepare": "husky || true"`
+7. ~~**Add `LICENSE` file**~~ — **Done** (commit `be8ed1d`)
+8. **Add `provenance: true` to `publishConfig`** — `publishConfig` exists (`"access": "public"`) but is missing `provenance: true`. Update to:
    ```json
    "publishConfig": { "access": "public", "provenance": true }
    ```
    Setting `provenance: true` here (rather than a CLI flag) ensures it's always set and appears in `package.json` as documentation of intent.
-7. **Confirm `engines` field** — already present (`"node": ">=22.0.0"`); no change needed
-8. **Add `publint` to devDependencies** — static linter that validates `package.json` publish correctness (bin paths exist, `files` entries resolve, ESM/CJS consistency). Fast enough for pre-commit (<1s, file reads only). Add as `make lint-pkg` target and to the pre-commit hook alongside existing lint-staged checks.
+9. **Confirm `engines` field** — already present (`"node": ">=22.0.0"`); no change needed
+10. **Add `publint` to devDependencies** — static linter that validates `package.json` publish correctness (bin paths exist, `files` entries resolve, ESM/CJS consistency). Fast enough for pre-commit (<1s, file reads only). Add as `make lint-pkg` target and to the pre-commit hook alongside existing lint-staged checks.
 
 ## README Badges
 
 Add to `README.md` header (after the title, before the description):
 
 ```markdown
-[![npm](https://img.shields.io/npm/v/rereadme)](https://www.npmjs.com/package/rereadme)
+[![npm](https://img.shields.io/npm/v/%40cjlludwig%2Frereadme)](https://www.npmjs.com/package/@cjlludwig/rereadme)
 [![CI](https://github.com/cjlludwig/rereadme/actions/workflows/ci.yml/badge.svg)](https://github.com/cjlludwig/rereadme/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ```
@@ -96,7 +101,7 @@ jobs:
         id: version_check
         run: |
           LOCAL=$(node -p "require('./package.json').version")
-          PUBLISHED=$(npm view rereadme version 2>/dev/null || echo "0.0.0")
+          PUBLISHED=$(npm view @cjlludwig/rereadme version 2>/dev/null || echo "0.0.0")
           echo "local=$LOCAL" >> "$GITHUB_OUTPUT"
           echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
           if [ "$LOCAL" = "$PUBLISHED" ]; then
@@ -109,7 +114,7 @@ jobs:
         if: steps.version_check.outputs.changed == 'true'
         run: |
           npm pack
-          TARBALL=$(ls rereadme-*.tgz)
+          TARBALL=$(ls cjlludwig-rereadme-*.tgz)
           SIZE=$(stat -c%s "$TARBALL")
           echo "Pack size: ${SIZE} bytes"
           rm "$TARBALL"
@@ -182,7 +187,7 @@ Add a pack smoke test job that runs on every push/PR. Installs the CLI from the 
       - name: Pack and install from tarball
         run: |
           npm pack
-          npm install -g ./rereadme-*.tgz
+          npm install -g ./cjlludwig-rereadme-*.tgz
 
       - name: Smoke test CLI
         run: rereadme --help
@@ -228,7 +233,7 @@ Alternatively, manually edit the `version` field in `package.json` and push.
 | `.github/workflows/publish.yml` | **New** — the publish workflow |
 | `.github/workflows/ci.yml` | **Modified** — add `smoke-test` job |
 | `.github/workflows/readme-ci.yml` | **Manual update needed before first release** — currently pins `v0.0.3`, bump to `v0.0.4`; auto-updated thereafter |
-| `package.json` | **Modified** — `files`, add `provenance: true` to `publishConfig`, dependency moves, `prepare`, add `publint` to devDependencies, fix `homepage`/`bugs`/`repository` URLs (`connorludwig` → `cjlludwig`) |
+| `package.json` | **Modified** — rename to `@cjlludwig/rereadme`, `files`, add `provenance: true` to `publishConfig`, dependency moves, `prepare`, add `publint` to devDependencies, fix `homepage`/`bugs`/`repository` URLs (`connorludwig` → `cjlludwig`) |
 | `Makefile` | **Modified** — add `lint-pkg` target (`npx publint`), add to `check` and `pre-commit` |
 | `LICENSE` | **New** — MIT license text |
 | `README.md` | **Modified** — add npm, CI, and license badges |
@@ -241,8 +246,8 @@ Alternatively, manually edit the `version` field in `package.json` and push.
 - [ ] `npx publint` exits 0 with no errors
 - [ ] `npm pack --dry-run` shows ≤ 10 files, package size < 500 kB
 - [ ] `ci.yml` smoke-test job passes: pack → install from tarball → `rereadme --help`
-- [ ] `npm install -g rereadme` on a clean machine runs `rereadme --help` successfully
-- [ ] After merging a version bump PR, `npm view rereadme version` returns the new version within ~2 minutes
+- [ ] `npm install -g @cjlludwig/rereadme` on a clean machine runs `rereadme --help` successfully
+- [ ] After merging a version bump PR, `npm view @cjlludwig/rereadme version` returns the new version within ~2 minutes
 - [ ] Git tags `vX.Y.Z` and `vX` exist on the release commit
 - [ ] `readme-ci.yml` is updated to `cjlludwig/ReReadme@vX.Y.Z` with a `[skip ci]` commit
 - [ ] A GitHub Release exists at `vX.Y.Z` with auto-generated notes listing merged PRs

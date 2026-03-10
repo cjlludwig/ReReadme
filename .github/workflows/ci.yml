@@ -45,7 +45,7 @@ jobs:
       - name: Pack and install from tarball
         run: |
           npm pack
-          npm install -g ./rereadme-*.tgz
+          npm install -g ./cjlludwig-rereadme-*.tgz
 
       - name: Smoke test CLI
         run: rereadme --help

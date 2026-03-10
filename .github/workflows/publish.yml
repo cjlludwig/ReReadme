@@ -32,7 +32,7 @@ jobs:
         id: version_check
         run: |
           LOCAL=$(node -p "require('./package.json').version")
-          PUBLISHED=$(npm view rereadme version 2>/dev/null || echo "0.0.0")
+          PUBLISHED=$(npm view @cjlludwig/rereadme version 2>/dev/null || echo "0.0.0")
           echo "local=$LOCAL" >> "$GITHUB_OUTPUT"
           echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
           if [ "$LOCAL" = "$PUBLISHED" ]; then
@@ -45,7 +45,7 @@ jobs:
         if: steps.version_check.outputs.changed == 'true'
         run: |
           npm pack
-          TARBALL=$(ls rereadme-*.tgz)
+          TARBALL=$(ls cjlludwig-rereadme-*.tgz)
           SIZE=$(stat -c%s "$TARBALL")
           echo "Pack size: ${SIZE} bytes"
           rm "$TARBALL"
@@ -54,10 +54,14 @@ jobs:
       - name: Publish dry run
         if: steps.version_check.outputs.changed == 'true'
         run: npm publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         if: steps.version_check.outputs.changed == 'true'
         run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag release
         if: steps.version_check.outputs.changed == 'true'
