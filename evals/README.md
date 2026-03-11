@@ -25,6 +25,7 @@ Run a single experiment:
 
 ```bash
 npm run eval:rereadme
+npm run eval:ci
 ```
 
 Or directly:
@@ -33,6 +34,7 @@ Or directly:
 cd evals
 uv run deepeval test run test_express_server.py -v
 uv run deepeval test run test_rereadme.py -v
+uv run pytest test_ci_mode.py -v
 ```
 
 Requires `OPENAI_API_KEY` set in environment (used by both rereadme and the GEval LLM judge).
@@ -50,6 +52,19 @@ Runs rereadme against its own repository (self-referencing submodule). Keywords 
 ### front-end (`test_front_end.py`)
 
 Runs rereadme against an Express/Redis/Prometheus/Mocha BFF microservice (port 8079). Includes 8 standard tests plus 2 LLM-judge tests for readability and template adherence. Keywords checked: `npm install`, `npm test`, `Express`, `Redis`, `Docker`, `Prometheus`.
+
+### ci-mode (`test_ci_mode.py`)
+
+Tests rereadme's `--ci` mode against four pinned PRs from this repo's own history (deterministic commit SHAs via `conftest.py` fixtures). Validates that the tool correctly classifies diffs as significant or non-significant and generates well-formed suggestion output.
+
+| PR | Fixture | Expected | Signal | Alert |
+|----|---------|----------|--------|-------|
+| #11 — `--ci` flag introduction | `ci_run_pr11` | significant | high | `[!CAUTION]` |
+| #14 — GitHub Action | `ci_run_pr14` | significant | medium | `[!WARNING]` |
+| #15 — internal refactor | `ci_run_pr15` | non-significant | — | — |
+| #17 — eval/CI-only changes | `ci_run_pr17` | non-significant | — | — |
+
+Per-case tests: `test_file_presence`, `test_exit_code`, `test_output_format`, `test_alert_matches_signal`, `test_diff_block_present`, `test_section_heading_exists`, `test_keywords`, `test_signal_geval` (GEval, threshold 0.70).
 
 ## Metrics
 
@@ -79,7 +94,3 @@ Runs rereadme against an Express/Redis/Prometheus/Mocha BFF microservice (port 8
 2. **Review** — Inspect the golden file. If it looks good, commit it.
 3. **Subsequent runs** — GEval compares generated output against the committed golden file.
 4. **On failure** — Review the diff. If the new output is better, delete the golden file and re-run to regenerate. If it's a regression, investigate the pipeline.
-
-## CI (Planned)
-
-See `.github/workflows/eval.yml.todo` for the planned CI workflow that runs evaluations on PRs touching `script.ts`, `lib/**`, or `templates/**`.
