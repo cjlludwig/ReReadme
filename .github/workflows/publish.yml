@@ -101,6 +101,7 @@ jobs:
           VERSION: ${{ steps.version_check.outputs.local }}
           GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
+          git config --unset-all http.https://github.com/.extraheader || true
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/cjlludwig/ReReadme.git"
           BRANCH="chore/update-gha-ref-v${VERSION}"
           git checkout -b "$BRANCH"
