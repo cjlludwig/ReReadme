@@ -9,10 +9,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # push tags, self-update commit, and open PRs
-      id-token: write   # required for npm provenance attestation
+      contents: write      # push tags
+      id-token: write      # required for npm provenance attestation
       pull-requests: write # open PR to update readme-ci.yml version ref
-      workflows: write  # modify .github/workflows/ files in PR branch
 
     steps:
       - uses: actions/checkout@v4
@@ -88,12 +87,21 @@ jobs:
             --title "v${VERSION}" \
             --generate-notes
 
+      - name: Generate GitHub App token for workflow file push
+        id: app_token
+        if: steps.version_check.outputs.changed == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Update readme-ci.yml to new version
         if: steps.version_check.outputs.changed == 'true'
         env:
           VERSION: ${{ steps.version_check.outputs.local }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/cjlludwig/ReReadme.git"
           BRANCH="chore/update-gha-ref-v${VERSION}"
           git checkout -b "$BRANCH"
           sed -i "s|cjlludwig/ReReadme@v[0-9]*\.[0-9]*\.[0-9]*|cjlludwig/ReReadme@v${VERSION}|g" \
