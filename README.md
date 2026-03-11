@@ -85,8 +85,9 @@ rereadme --interactive
 # Specify output file
 rereadme --output README-new.md
 
-# Override the AI model
-rereadme --model gpt-4o
+# Override the AI model (default: gpt-5-nano, tuned for cost-efficiency)
+# Frontier models (e.g. gpt-4o, 5.2) produce richer output at higher cost
+rereadme --model gpt-5.2
 
 # Skip backup creation
 rereadme --no-backup
