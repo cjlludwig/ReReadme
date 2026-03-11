@@ -11,9 +11,12 @@ How to set up the repo locally, run the tool in development, execute tests and e
 ## Setup
 
 ```shell
-git clone https://github.com/connorludwig/rereadme.git
+git clone https://github.com/cjlludwig/rereadme.git
 cd rereadme
 npm install        # installs deps + configures the husky pre-commit hook automatically
+
+# Check dependencies
+npm run check
 ```
 
 To also set up the eval framework and dataset submodules:
@@ -111,7 +114,7 @@ git push
 3. Creates a GitHub Release with auto-generated notes from merged PR titles
 4. Commits a version bump to `.github/workflows/readme-ci.yml` so this repo uses the version it just released
 
-Verify the release at `https://www.npmjs.com/package/rereadme` and the GitHub Releases tab.
+Verify the release at `https://www.npmjs.com/package/@cjlludwig/rereadme` and the GitHub Releases tab.
 
 ## Standards
 

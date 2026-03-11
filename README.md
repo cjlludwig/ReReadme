@@ -30,8 +30,7 @@ Headless coding agents now interact with your repository repeatedly. Each sessio
 ## Quick Start
 
 ```shell
-git clone https://github.com/cjlludwig/rereadme.git
-cd rereadme && npm install && npm link
+npm install -g @cjlludwig/rereadme
 
 # Run in any repo
 cd /your/repo
@@ -61,24 +60,10 @@ rereadme
 #### Global Installation (Recommended)
 
 ```shell
-git clone https://github.com/cjlludwig/rereadme.git
-cd rereadme
-npm install
-npm link
+npm install -g @cjlludwig/rereadme
 
 # Verify installation
 rereadme --help
-```
-
-#### Local Installation
-
-```shell
-git clone https://github.com/cjlludwig/rereadme.git
-cd rereadme
-npm install
-
-# Check dependencies
-npm run check
 ```
 
 ## Usage
