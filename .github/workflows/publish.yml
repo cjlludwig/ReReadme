@@ -94,6 +94,6 @@ jobs:
           sed -i "s|cjlludwig/ReReadme@v[0-9]*\.[0-9]*\.[0-9]*|cjlludwig/ReReadme@v${VERSION}|g" \
             .github/workflows/readme-ci.yml
           git add .github/workflows/readme-ci.yml
-          git diff --cached --quiet || git commit -m "chore: update GHA ref to v${VERSION} [skip ci]"
+          git diff --cached --quiet || git commit --no-verify -m "chore: update GHA ref to v${VERSION} [skip ci]"
           git pull --rebase
           git push
