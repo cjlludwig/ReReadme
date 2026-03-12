@@ -95,3 +95,4 @@ A `Makefile` at the repo root drives all quality checks:
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - Prefer `npm` script commands over `npx` for standardized scripts. Update if needed.
 - Prefer JSDocs for function level comments or descriptions. In-line should only be used if the logic isn't self explanatory or readable.
+- Any change to `action.yml`, `script.ts`, `lib/`, `bin/`, or `templates/` only takes effect for GHA consumers **after a new release is published**. When fixing a bug in these files, always proactively note: "This fix requires a version bump and release to take effect — bump `package.json` version to trigger the publish workflow."
