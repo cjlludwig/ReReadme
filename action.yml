@@ -1,4 +1,4 @@
-name: rereadme
+name: cjlludwig rereadme
 description: Analyze PR diffs and suggest README updates
 inputs:
   openai-api-key:
