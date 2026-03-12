@@ -1,6 +1,6 @@
 {
   "name": "@cjlludwig/rereadme",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "CLI tool to refresh README automatically with up-to-date information based on code contents, documents, and external sources",
   "type": "module",
   "bin": {
