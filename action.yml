@@ -18,11 +18,13 @@ branding:
 runs:
   using: composite
   steps:
+    - run: echo "ACTION_PATH=${{ github.action_path }}" >> "$GITHUB_ENV"
+      shell: bash
     - uses: actions/setup-node@v4
       with:
         node-version: "24"
         cache: "npm"
-        cache-dependency-path: "${{ github.action_path }}/package-lock.json"
+        cache-dependency-path: "${{ env.ACTION_PATH }}/package-lock.json"
     - run: npm ci
       shell: bash
       working-directory: ${{ github.action_path }}
