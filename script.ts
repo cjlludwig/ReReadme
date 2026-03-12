@@ -444,6 +444,7 @@ async function main(): Promise<void> {
   if (args.check) {
     log.step('Checking dependencies')
     const depsOk = CI_MODE ? await checkCiDependencies() : await checkDependencies()
+    if (depsOk) log.info('All dependencies OK')
     process.exit(depsOk ? 0 : 1)
     return
   }
