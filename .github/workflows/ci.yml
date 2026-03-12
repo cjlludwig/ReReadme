@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: "npm"
 
       - run: npm ci
 
@@ -29,7 +30,6 @@ jobs:
         run: rereadme --check
         env:
           OPENAI_API_KEY: foo
-          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   smoke-test:
     runs-on: ubuntu-latest
@@ -39,6 +39,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          cache: "npm"
 
       - run: npm ci
 
