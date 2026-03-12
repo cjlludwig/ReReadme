@@ -18,14 +18,27 @@ branding:
 runs:
   using: composite
   steps:
-    - run: echo "ACTION_PATH=${{ github.action_path }}" >> "$GITHUB_ENV"
-      shell: bash
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         node-version: "24"
-        cache: "npm"
-        cache-dependency-path: "${{ env.ACTION_PATH }}/package-lock.json"
+    - uses: actions/github-script@v7
+      id: lock-hash
+      with:
+        script: |
+          const crypto = require('crypto')
+          const fs = require('fs')
+          const path = require('path')
+          const lockFile = path.join(process.env.GITHUB_ACTION_PATH, 'package-lock.json')
+          return crypto.createHash('sha256').update(fs.readFileSync(lockFile)).digest('hex')
+        result-encoding: string
+    - uses: actions/cache@v4
+      id: node-cache
+      with:
+        path: ${{ github.action_path }}/node_modules
+        key: ${{ runner.os }}-rereadme-node-${{ steps.lock-hash.outputs.result }}
+        restore-keys: ${{ runner.os }}-rereadme-node-
     - run: npm ci
+      if: steps.node-cache.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ github.action_path }}
     - run: node ${{ github.action_path }}/bin/rereadme.js --ci --base-ref ${{ inputs.base-ref }} --head-ref HEAD ${{ inputs.verbose == 'true' && '--verbose' || '' }} ${{ inputs.model != '' && format('--model {0}', inputs.model) || '' }}

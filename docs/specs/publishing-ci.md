@@ -87,7 +87,7 @@ jobs:
           fetch-depth: 0       # required to push tags
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -178,7 +178,7 @@ Add a pack smoke test job that runs on every push/PR. Installs the CLI from the 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
 
