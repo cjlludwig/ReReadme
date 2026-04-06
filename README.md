@@ -50,6 +50,7 @@ rereadme
 
 - Node.js >= 22.0.0 (enforced by `engines.node` in `package.json`)
 - `OPENAI_API_KEY` environment variable (see OpenAI [Developer Quickstart](http://developers.openai.com/api/docs/quickstart/))
+- Optional: `OPENAI_BASE_URL` environment variable for enterprise API keys scoped to regional endpoints (e.g., `https://us.api.openai.com/v1`)
 - Optional: `markdownlint-cli` for formatting and linting of the generated README
 
 **Troubleshooting Dependencies:**

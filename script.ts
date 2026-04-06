@@ -5,6 +5,8 @@ import { $, fs, path, argv } from 'zx'
 import { fileURLToPath } from 'url'
 import { lint, readConfig } from 'markdownlint/promise'
 import { applyFixes } from 'markdownlint'
+import { setDefaultOpenAIClient } from '@openai/agents'
+import { OpenAI } from 'openai'
 import { runAgentWorkflow, runDiffWorkflow, type WorkflowStats } from './lib/runner.js'
 import { renderSuggestions, applyPatches } from './lib/readme-utils.js'
 import { validateTemplate } from './lib/validate.js'
@@ -14,6 +16,38 @@ import pc from 'picocolors'
 // Get the directory where this script is located (for accessing templates)
 const SCRIPT_FILE = fileURLToPath(import.meta.url)
 const SCRIPT_DIR = path.dirname(SCRIPT_FILE)
+
+/**
+ * Initializes the OpenAI client with optional regional endpoint support.
+ * Enterprise-managed API keys may be scoped to a specific regional hostname
+ * (e.g. us.api.openai.com). Set OPENAI_BASE_URL to override the default endpoint.
+ */
+function initOpenAIClient(): void {
+  const baseURL = process.env.OPENAI_BASE_URL
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    ...(baseURL && { baseURL }),
+  })
+  setDefaultOpenAIClient(client)
+}
+
+/**
+ * Enriches known OpenAI API error messages with actionable fix hints.
+ * Currently handles regional hostname 401s from enterprise-managed API keys.
+ */
+function enrichApiError(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String(error)
+
+  // Regional hostname error: key is locked to a specific endpoint.
+  // The error message itself contains the correct hostname to use.
+  const regionalMatch = msg.match(/please make your[^.]*request to ([\w.]+)/i)
+  if (regionalMatch) {
+    const suggestedURL = `https://${regionalMatch[1]}/v1`
+    return `${msg}\n${pc.dim(`  Fix: export OPENAI_BASE_URL=${suggestedURL}`)}`
+  }
+
+  return msg
+}
 
 // Configuration — argv is typed as Record<string, unknown> by zx
 const args = argv as Record<string, unknown>
@@ -157,7 +191,7 @@ export async function runCiWorkflow(): Promise<void> {
     log.outro(`Done in ${elapsed}s — review ${CI_OUTPUT}`)
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorMessage = enrichApiError(error)
     log.error(errorMessage)
     process.exit(1)
   }
@@ -406,7 +440,8 @@ ${pc.yellow('Options:')}
   --apply                   Apply suggestions to README.md; with --ci, also applies after analysis
 
 ${pc.yellow('Environment Variables:')}
-  OPENAI_API_KEY  Required - Your OpenAI API key
+  OPENAI_API_KEY   Required - Your OpenAI API key
+  OPENAI_BASE_URL  Optional - Custom API endpoint (e.g. for enterprise regional keys)
 
 ${pc.yellow('How it works:')}
   Uses a multi-agent architecture powered by the OpenAI Agents SDK.
@@ -441,6 +476,8 @@ async function main(): Promise<void> {
     return
   }
 
+  initOpenAIClient()
+
   if (args.check) {
     log.step('Checking dependencies')
     const depsOk = CI_MODE ? await checkCiDependencies() : await checkDependencies()
@@ -464,7 +501,7 @@ async function main(): Promise<void> {
 
 // Run the main function
 main().catch((error: unknown) => {
-  const msg = error instanceof Error ? error.message : String(error)
+  const msg = enrichApiError(error)
   log.error(`Fatal error: ${msg}`)
   process.exit(1)
 })
