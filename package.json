@@ -56,9 +56,10 @@
   },
   "dependencies": {
     "@clack/prompts": "1.0.1",
-    "@openai/agents": "0.4.10",
+    "@openai/agents": "0.8.3",
     "globby": "16.1.1",
     "markdownlint": "0.40.0",
+    "openai": "6.33.0",
     "picocolors": "1.1.1",
     "tsx": "4.21.0",
     "zod": "4.3.6",
