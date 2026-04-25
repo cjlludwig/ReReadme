@@ -114,14 +114,26 @@ Note: The front-end proxies requests to the corresponding microservices, so the 
 ## Architecture
 
 ```mermaid
-graph TD
-  Browser[Browser / UI] -->|HTTP| FrontEnd[front-end (Node/Express)]
-  FrontEnd -->|HTTP| Catalogue[catalogue service]
-  FrontEnd -->|HTTP| Carts[carts service]
-  FrontEnd -->|HTTP| Orders[orders service]
-  FrontEnd -->|HTTP| User[user service]
-  FrontEnd -->|/metrics| Prometheus[Prometheus scraper]
-  FrontEnd -->|sessions (optional)| Redis[(Redis: session-db)]
+flowchart LR
+  Browser["Browser / UI"] -->|HTTP| FrontEnd["front-end<br/>Node / Express"]
+  FrontEnd -->|HTTP| Catalogue["Catalogue service"]
+  FrontEnd -->|HTTP| Carts["Carts service"]
+  FrontEnd -->|HTTP| Orders["Orders service"]
+  FrontEnd -->|HTTP| User["User service"]
+  FrontEnd -->|sessions| Redis[("Redis<br/>session-db")]
+  Prometheus["Prometheus"] -->|scrapes /metrics| FrontEnd
+
+  classDef caller fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px
+  classDef app fill:#ede9fe,stroke:#7c3aed,color:#2e1065,stroke-width:2px
+  classDef external fill:#fef3c7,stroke:#d97706,color:#451a03,stroke-width:1.5px
+  classDef storage fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:1.5px
+  classDef observability fill:#fae8ff,stroke:#c026d3,color:#4a044e,stroke-width:1.5px
+
+  class Browser caller
+  class FrontEnd app
+  class Catalogue,Carts,Orders,User external
+  class Redis storage
+  class Prometheus observability
 ```
 
 ## References

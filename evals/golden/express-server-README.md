@@ -62,9 +62,19 @@ curl http://localhost:9000/api/document/doc1
 ## Architecture
 
 ```mermaid
-graph TD
-  Client -->|HTTP| Server
-  Server -->|MongoDB| MongoDB
+flowchart LR
+  Client["Client / caller"] -->|HTTP| Server["Express API"]
+  Server -->|read/write| MongoDB[("MongoDB")]
+
+  classDef caller fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px
+  classDef app fill:#ede9fe,stroke:#7c3aed,color:#2e1065,stroke-width:2px
+  classDef external fill:#fef3c7,stroke:#d97706,color:#451a03,stroke-width:1.5px
+  classDef storage fill:#dcfce7,stroke:#16a34a,color:#052e16,stroke-width:1.5px
+  classDef observability fill:#fae8ff,stroke:#c026d3,color:#4a044e,stroke-width:1.5px
+
+  class Client caller
+  class Server app
+  class MongoDB storage
 ```
 
 ## References

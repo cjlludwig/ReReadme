@@ -1,4 +1,5 @@
 import { expect, describe, it } from '@jest/globals'
+import { ArchitectureDiagramOutputSchema, createAgents } from '../lib/agents.js'
 import { applyPatches, renderSuggestions, stripFences } from '../lib/readme-utils.js'
 import { runAgentWorkflow, runDiffWorkflow } from '../lib/runner.js'
 
@@ -38,6 +39,22 @@ describe("Agent Runner exports", () => {
     it("should export runDiffWorkflow function", () => {
         expect(runDiffWorkflow).toBeDefined()
         expect(typeof runDiffWorkflow).toBe('function')
+    })
+
+    it("creates an architecture diagram agent for README generation", () => {
+        const agents = createAgents('gpt-5-nano', '# Template')
+        expect(agents.architectureDiagramAgent).toBeDefined()
+        expect(agents.readmeWriter).toBeDefined()
+    })
+
+    it("validates architecture diagram output shape", () => {
+        const parsed = ArchitectureDiagramOutputSchema.parse({
+            includeDiagram: true,
+            sectionMarkdown: '## Architecture\n\n```mermaid\nflowchart LR\n  User -->|HTTP| App\n```',
+            rationale: 'The repository has an externally visible request flow.',
+            sourceFacts: ['package.json defines a CLI entrypoint'],
+        })
+        expect(parsed.includeDiagram).toBe(true)
     })
 })
 

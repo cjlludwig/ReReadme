@@ -153,23 +153,6 @@ client.method(args); // describe what this does
 ```
 -->
 
-## Architecture
-
-> Only include this section if the project has non-obvious topology — multiple services, external dependencies, or a request flow not inferrable from the file structure. Omit for simple or single-concern repos.
->
-> When included, use Mermaid `graph TD` if multiple services or external dependencies exist with explicit config or instantiation. Otherwise omit the section entirely.
->
-> Only diagram components with direct instantiation or a config entry. Do not infer from imports alone.
-
-<!-- EXAMPLE STRUCTURE — do not reproduce literally -->
-```mermaid
-graph TD
-  Client -->|HTTP| Gateway
-  Gateway -->|gRPC| ServiceA
-  ServiceA -->|query| DB[(Database)]
-```
-<!-- END EXAMPLE STRUCTURE -->
-
 ## References
 
 > (Optional) Markdown link list to official docs for each named technology in the README.

@@ -8,6 +8,7 @@ from metrics import (
     SectionHeadersMetric,
     SectionContentMetric,
     KeywordsMetric,
+    ArchitectureDiagramMetric,
     GoldenAlignmentJudgeMetric,
     ReadabilityJudgeMetric,
     TemplateAdherenceJudgeMetric,
@@ -46,6 +47,16 @@ def test_section_content(generated_readme_front_end: str) -> None:
 def test_keywords(generated_readme_front_end: str) -> None:
     """README must include key front-end project keywords."""
     metric = KeywordsMetric(threshold=1.0, keywords=FRONT_END_README_KEYWORDS)
+    test_case = LLMTestCase(
+        input="Generate a README for front-end",
+        actual_output=generated_readme_front_end,
+    )
+    assert_test(test_case, [metric])
+
+
+def test_architecture_diagram(generated_readme_front_end: str) -> None:
+    """Architecture diagrams should be concise, macro-level Mermaid flowcharts."""
+    metric = ArchitectureDiagramMetric()
     test_case = LLMTestCase(
         input="Generate a README for front-end",
         actual_output=generated_readme_front_end,

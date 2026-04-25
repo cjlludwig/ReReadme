@@ -24,14 +24,15 @@ To also set up the eval framework and dataset submodules:
 ```shell
 npm run setup
 # Equivalent to:
-# git submodule update --init evals/datasets/express-server evals/datasets/rereadme
+# git submodule update --init evals/datasets/express-server evals/datasets/rereadme evals/datasets/front-end
 # cd evals && uv sync
 ```
 
-The two eval dataset submodules are:
+The eval dataset submodules are:
 
 - `evals/datasets/express-server` — Node.js/Express/MongoDB sample project
 - `evals/datasets/rereadme` — rereadme's own repo (used for self-referencing eval)
+- `evals/datasets/front-end` — Express/Redis/Prometheus BFF microservice sample project
 
 ## Development Workflow
 

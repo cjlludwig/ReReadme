@@ -1,6 +1,7 @@
 from .section_headers import SectionHeadersMetric
 from .section_content import SectionContentMetric
 from .keywords import KeywordsMetric
+from .architecture_diagram import ArchitectureDiagramMetric
 from .judge import GoldenAlignmentJudgeMetric, ReadabilityJudgeMetric, TemplateAdherenceJudgeMetric
 from .types import (
     EXPRESS_README_KEYWORDS,
@@ -18,6 +19,7 @@ __all__ = [
     "SectionHeadersMetric",
     "SectionContentMetric",
     "KeywordsMetric",
+    "ArchitectureDiagramMetric",
     "GoldenAlignmentJudgeMetric",
     "ReadabilityJudgeMetric",
     "TemplateAdherenceJudgeMetric",
