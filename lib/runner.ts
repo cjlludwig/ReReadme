@@ -1,5 +1,11 @@
 import { run, withTrace, type Agent } from '@openai/agents';
-import { createAgents, createDiffAgents, type DiffAnalysis, type ReadmeSuggestion } from './agents.js';
+import {
+  createAgents,
+  createDiffAgents,
+  type ArchitectureDiagramOutput,
+  type DiffAnalysis,
+  type ReadmeSuggestion,
+} from './agents.js';
 import { composeReadmeWithArchitecture, removeMarkdownSection } from './markdown-sections.js';
 import { stripFences } from './readme-utils.js';
 import * as fs from 'node:fs';
@@ -116,47 +122,54 @@ export interface AgentWorkflowOptions {
   model: string;
   readmeTemplate: string;
   agentsTemplate?: string;
+  includeArchitecture?: boolean;
   verbose?: boolean;
 }
 
 export async function runAgentWorkflow(
   options: AgentWorkflowOptions,
 ): Promise<{ readme: string; agents?: string; stats: WorkflowStats }> {
-  const { model, readmeTemplate, agentsTemplate } = options;
+  const { model, readmeTemplate, agentsTemplate, includeArchitecture = true } = options;
 
   const { agentsDocWriter, architectureDiagramAgent, readmeWriter } = createAgents(model, readmeTemplate, agentsTemplate);
   const stats: WorkflowStats = { toolCallCount: 0, toolCallsByAgent: {}, toolCallsByTool: {} };
-  attachToolLogger(architectureDiagramAgent, 'ArchitectureDiagramAgent', stats);
+  if (includeArchitecture) attachToolLogger(architectureDiagramAgent, 'ArchitectureDiagramAgent', stats);
   attachToolLogger(readmeWriter, 'ReadmeWriter', stats);
   if (agentsDocWriter) attachToolLogger(agentsDocWriter, 'AgentsDocWriter', stats);
 
   const totalSteps = agentsDocWriter ? 2 : 1;
 
-  // README pipeline: ArchitectureDiagramAgent + ReadmeWriter in parallel → deterministic composition → (AgentsDocWriter?)
+  // README pipeline: optional ArchitectureDiagramAgent + ReadmeWriter → deterministic composition → (AgentsDocWriter?)
   const { readme, agents } = await withTrace('ReReadme Agent Workflow', async () => {
-    // Step 1: Generate README body and architecture section concurrently.
-    log.verboseStep(`Step 1/${totalSteps}: README generation (parallel, model: ${model})`);
-    log.verboseStep('ArchitectureDiagramAgent started');
-    const architecturePromise = run(
-      architectureDiagramAgent,
-      'Analyze this repository and produce the README Architecture section decision.',
-      { maxTurns: 25 },
-    ).then((result) => {
-      if (!result.finalOutput) {
-        throw new Error('ArchitectureDiagramAgent produced no output');
-      }
-      log.verboseStep(
-        `ArchitectureDiagramAgent done (includeDiagram=${result.finalOutput.includeDiagram}, facts=${result.finalOutput.sourceFacts.length})`,
-      );
-      return result.finalOutput;
-    });
-
-    log.verboseStep('ReadmeWriter started');
+    log.verboseStep(`Step 1/${totalSteps}: README generation (model: ${model})`);
+    log.detail('ReadmeWriter started');
+    if (includeArchitecture) {
+      log.detail('ArchitectureDiagramAgent started (parallel)');
+    } else {
+      log.detail('ArchitectureDiagramAgent skipped (--no-architecture)');
+    }
+    const architecturePromise: Promise<ArchitectureDiagramOutput | undefined> = includeArchitecture
+      ? run(
+        architectureDiagramAgent,
+        'Analyze this repository and produce the README Architecture section decision.',
+        { maxTurns: 25 },
+      ).then((result) => {
+        if (!result.finalOutput) {
+          throw new Error('ArchitectureDiagramAgent produced no output');
+        }
+        log.verboseStep(
+          `ArchitectureDiagramAgent done (includeDiagram=${result.finalOutput.includeDiagram}, facts=${result.finalOutput.sourceFacts.length})`,
+        );
+        return result.finalOutput;
+      })
+      : Promise.resolve(undefined);
     const readmePromise = run(
       readmeWriter,
-      `Generate a README.md for this repository.
+      includeArchitecture
+        ? `Generate a README.md for this repository.
 
-The Architecture section is composed by the workflow after README generation. You may omit ## Architecture. If you include it, it will be replaced deterministically.`,
+The Architecture section is composed by the workflow after README generation. Omit ## Architecture from your output; if you include it, it will be replaced deterministically.`
+        : `Generate a README.md for this repository. Omit ## Architecture from your output because architecture generation is disabled.`,
       { maxTurns: 40 },
     ).then((result) => {
       if (!result.finalOutput || result.finalOutput.trim().length === 0) {
@@ -167,12 +180,13 @@ The Architecture section is composed by the workflow after README generation. Yo
     });
 
     const [architecture, generatedReadme] = await Promise.all([architecturePromise, readmePromise]);
-    const readmeWithArchitecture = architecture.sectionMarkdown.trim()
-      ? composeReadmeWithArchitecture(generatedReadme, architecture.sectionMarkdown)
+    const architectureSection = architecture?.sectionMarkdown.trim() ?? '';
+    const readmeWithArchitecture = architectureSection
+      ? composeReadmeWithArchitecture(generatedReadme, architectureSection)
       : removeMarkdownSection(generatedReadme, 'Architecture');
 
     log.verboseStep(
-      architecture.sectionMarkdown.trim()
+      architectureSection
         ? 'Architecture section inserted'
         : 'Architecture section omitted',
     );

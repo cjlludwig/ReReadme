@@ -81,4 +81,5 @@ DeepEval-based quality evaluation that runs rereadme against a dataset repo and 
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 - Prefer `npm` script commands over `npx` for standardized scripts. Update if needed.
 - Prefer JSDocs for function level comments or descriptions. In-line should only be used if the logic isn't self explanatory or readable.
+- When tuning agent prompts or model behavior, fix broad failure modes rather than literal eval misses. Prefer reusable guidance about discovery, evidence, structure, and tradeoffs; avoid embedding dataset-specific keywords, commands, or golden-output phrasing unless they represent a general product requirement.
 - Any change to `action.yml`, `script.ts`, `lib/`, `bin/`, or `templates/` only takes effect for GHA consumers after a new release is published. When fixing a bug in these files, always proactively note: "This fix requires a version bump and release to take effect — bump `package.json` version to trigger the publish workflow."
