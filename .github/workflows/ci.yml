@@ -16,10 +16,24 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
+          cache-dependency-path: package-lock.json
 
-      - run: npm ci
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          cache-dependency-glob: evals/uv.lock
+
+      - run: npm ci --prefer-offline --no-audit --fund=false
 
       - run: npm install -g markdownlint-cli
+
+      - run: cd evals && uv sync --locked
+
+      - name: Static quality gate
+        run: make check
+
+      - name: Unit tests
+        run: make test
 
       - run: npm link
 
@@ -40,8 +54,9 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
+          cache-dependency-path: package-lock.json
 
-      - run: npm ci
+      - run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Pack and install from tarball
         run: |

@@ -48,6 +48,13 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Local check caches
+.cache/
+.mypy_cache/
+.ruff_cache/
+evals/.mypy_cache/
+evals/.ruff_cache/
+
 # Optional npm cache directory
 .npm
 
