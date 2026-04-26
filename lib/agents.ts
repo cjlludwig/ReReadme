@@ -34,6 +34,17 @@ export const ReadmeSuggestionSchema = z.object({
 
 export type ReadmeSuggestion = z.infer<typeof ReadmeSuggestionSchema>;
 
+export const ArchitectureDiagramOutputSchema = z.object({
+  includeDiagram: z.boolean().describe('Whether the README should include an architecture diagram'),
+  sectionMarkdown: z
+    .string()
+    .describe('Complete README Architecture section markdown when includeDiagram=true; otherwise empty or minimal non-diagram section'),
+  rationale: z.string().describe('Concise rationale for including or omitting the architecture diagram'),
+  sourceFacts: z.array(z.string()).describe('Concrete repository facts used to produce the diagram decision and content'),
+});
+
+export type ArchitectureDiagramOutput = z.infer<typeof ArchitectureDiagramOutputSchema>;
+
 const TEMPLATE_RULES = `Template Rules:
 - The template below is your single source of truth for structure, headers, and content guidance. Follow every instruction in it exactly.
 - Every heading (lines starting with #) is REQUIRED and must appear verbatim, including the # level.
@@ -118,10 +129,56 @@ Rules:
   return { diffAnalyzer, readmePatcher };
 }
 
-/** 
- * Active single-agent pipeline: ReadmeWriter → (AgentsDocWriter?) 
+/**
+ * Active README pipeline: ArchitectureDiagramAgent → ReadmeWriter → (AgentsDocWriter?)
  */
 export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
+  const architectureDiagramAgent = new Agent({
+    name: 'ArchitectureDiagramAgent',
+    model,
+    outputType: ArchitectureDiagramOutputSchema,
+    instructions: `You are a repository architecture diagram researcher and README section writer. Produce a README-only architecture section that helps a developer understand the system at a macro level.
+
+Use the provided read-only repository tools to gather evidence before deciding. Favor get_file_tree first, then read_files, search_code, and get_structure for targeted follow-up. Do not invent services, stores, callers, consumers, protocols, or deployment boundaries.
+
+Output contract:
+- Return includeDiagram, sectionMarkdown, rationale, and sourceFacts only.
+- sourceFacts must list concrete facts supported by repository evidence, including paths when possible.
+- rationale must be concise and explain why a diagram is or is not useful.
+- Include a diagram only when the project has non-obvious topology: multiple services, external dependencies, or a request/data flow not inferable from the file structure. Omit it for simple or single-concern repositories.
+- Always include a diagram for gateway, proxy, BFF, microservice front-end, API server with external storage, or service that has configured downstream service URLs, database connection settings, metrics endpoints, queues, caches, or other runtime integration points.
+
+When includeDiagram=true:
+- sectionMarkdown must be a complete \`## Architecture\` README section.
+- Keep sectionMarkdown short: the heading, at most one plain-English orientation sentence, and exactly one Mermaid fenced code block.
+- Do not include bullet lists, "Key components", "Data flow", file paths, function names, class names, or explanatory implementation inventories in sectionMarkdown.
+- The section must contain exactly one Mermaid fenced code block.
+- The Mermaid diagram must be a concise macro diagram with 3-8 visible nodes and at most 10 edges.
+- Include upstream callers, the repo/application boundary, and downstream services, stores, observability systems, or consumers when those relationships are supported by repository facts.
+- Use shape and color together: node shapes should communicate system type, while colors should communicate stack layer or boundary.
+- Use Mermaid's broadly supported flowchart node shapes for semantic clarity: rounded/stadium for callers or users, rectangles/subroutine boxes for app servers or repo-owned services, cylinders for databases/storage, distinct non-rectangular shapes for queues/caches/events/observability when present, and subgraphs for repo boundaries only when helpful.
+- Use tasteful color contrast to show stack layers and boundaries: callers, the repo/application boundary, downstream services, storage, and observability should have distinct but readable styles.
+- Do not use functions, classes, source files, controllers, services, DAOs, modules, packages, or other internal implementation layers as nodes.
+- Do not infer runtime dependencies from imports alone. Imports can guide research, but diagram facts must be supported by config, entrypoints, README/docs, API clients, environment variables, deployment files, or explicit integration code.
+
+When includeDiagram=false:
+- sectionMarkdown should be an empty string, unless a minimal non-diagram \`## Architecture\` section is clearly useful from supported facts.
+- Do not include a Mermaid block.
+
+Mermaid requirements:
+- Use \`flowchart LR\`.
+- Every edge must be labeled with short labels using Mermaid pipe syntax, for example \`App -->|HTTP| API\`. Do not emit unlabeled edges.
+- Use short node labels; markdown labels are allowed where useful.
+- Prefer compatible bracket shape syntax over decorative icons, for example \`Client([Client])\`, \`App["API server"]\`, \`Worker[["Worker"]]\`, \`DB[("MongoDB")]\`, and \`Queue{{"Queue"}}\`.
+- An optional repo-boundary subgraph is allowed when it clarifies what is inside this repository.
+- Define all five classDef classes even if some are unused: caller, app, external, storage, and observability. Use distinct, theme-neutral, accessible colors. Prefer tasteful layer contrast over a mostly gray palette: blue callers, indigo application/repo boundary, amber downstream services, green storage, and purple observability.
+- Apply classes to relevant nodes.
+- Avoid icons, images, animations, decorative styling, and theme-specific assumptions.
+- Keep labels stable and readable in GitHub-flavored Markdown.`,
+    tools: [getFileTree, readFiles, searchCode, getStructure],
+    handoffDescription: 'Research and write an optional README Architecture section with a concise Mermaid diagram.',
+  });
+
   const agentsDocWriter = agentsTemplate
     ? new Agent({
         name: 'AgentsDocWriter',
@@ -150,7 +207,12 @@ Additional rules:
     model,
     instructions: `You are a technical doc writer, specializing in README documentation. Using the template and tools provided, write a complete README.md file that adheres to the conventions in the provided template.
 
-Iterate through the template sections one by one and use the tools provided to find the information to complete the section.
+The template is structure and guidance only. It is not the repository being documented. Do not document the template, template examples, placeholder text, or documentation instructions.
+
+Before writing the README, inspect the actual repository with tools:
+1. Call get_file_tree once to map the repository.
+2. Read the manifest, entrypoints, configuration, and existing documentation needed to fill the template.
+3. Iterate through the template sections one by one and use repository facts from those tools to complete each section.
 
 ${TEMPLATE_RULES}
 
@@ -167,7 +229,7 @@ Additional rules:
     tools: [getFileTree, readFiles, searchCode, getStructure],
   });
 
-  return { readmeWriter, agentsDocWriter };
+  return { architectureDiagramAgent, readmeWriter, agentsDocWriter };
 }
 
 /**

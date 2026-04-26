@@ -109,8 +109,8 @@ describe("git_diff_stat", () => {
         expect(result).toBe('No changes.')
     })
 
-    it("should return string output for valid refs", async () => {
-        const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD~3', toRef: 'HEAD' })
+    it("should return string output for valid refs without requiring deep history", async () => {
+        const result = await invokeTool(tools.gitDiffStat, { fromRef: 'HEAD', toRef: 'HEAD' })
         expect(typeof result).toBe('string')
     })
 
@@ -121,10 +121,9 @@ describe("git_diff_stat", () => {
 })
 
 describe("git_log", () => {
-    it("should return string output for HEAD~3...HEAD", async () => {
-        const result = await invokeTool(tools.gitLog, { fromRef: 'HEAD~3', toRef: 'HEAD' })
-        expect(typeof result).toBe('string')
-        expect(result.length).toBeGreaterThan(0)
+    it("should return a no-commits message for identical refs", async () => {
+        const result = await invokeTool(tools.gitLog, { fromRef: 'HEAD', toRef: 'HEAD' })
+        expect(result).toBe('No commits found.')
     })
 
     it("should return error string for invalid ref", async () => {

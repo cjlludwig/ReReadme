@@ -8,6 +8,7 @@ from metrics import (
     SectionHeadersMetric,
     SectionContentMetric,
     KeywordsMetric,
+    ArchitectureDiagramMetric,
     GoldenAlignmentJudgeMetric,
     EXPRESS_AGENTS_KEYWORDS,
     AGENTS_SECTIONS,
@@ -43,6 +44,16 @@ def test_section_content(generated_readme):
 def test_keywords(generated_readme):
     """README must include npm install and npm test commands."""
     metric = KeywordsMetric(threshold=1.0)
+    test_case = LLMTestCase(
+        input="Generate a README for express-server",
+        actual_output=generated_readme,
+    )
+    assert_test(test_case, [metric])
+
+
+def test_architecture_diagram(generated_readme):
+    """Architecture diagrams should be concise, macro-level Mermaid flowcharts."""
+    metric = ArchitectureDiagramMetric()
     test_case = LLMTestCase(
         input="Generate a README for express-server",
         actual_output=generated_readme,
