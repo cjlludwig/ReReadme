@@ -74,15 +74,19 @@ See [evals/README.md](../evals/README.md) for metrics, golden README workflow, a
 
 ## Quality Gate
 
-`make check` runs all static analysis — ESLint, markdownlint, ruff, tsc, mypy, depcheck, deptry:
+`make check` runs all static analysis — ESLint, markdownlint, ruff, tsc, mypy, depcheck, deptry. Local checks are intentionally quiet and cache-backed so agent loops get only actionable failures:
 
 ```shell
-make check                         # full quality gate (fail-fast)
+make check                         # quiet cached static gate (fail-fast)
+make check-full                    # uncached ESLint pass for debugging
 make fix                           # auto-fix: eslint --fix, markdownlint --fix, ruff --fix
-make test                          # Jest only
-make lint-ts                       # ESLint only
+make test                          # quiet cached Jest with coverage
+make test-full                     # uncached Jest with normal output
+make lint-ts                       # quiet cached ESLint only
+make lint-ts-full                  # uncached ESLint only
 make lint-md                       # markdownlint only
 make typecheck-ts                  # tsc --noEmit only
+make clean-check-cache             # remove local lint/test/typecheck caches
 ```
 
 The **pre-commit hook** (installed automatically by `npm install` via husky) runs on every commit:
