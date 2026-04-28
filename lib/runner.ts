@@ -1,5 +1,11 @@
 import { run, withTrace, type Agent } from '@openai/agents';
-import { createAgents, createDiffAgents, type DiffAnalysis, type ReadmeSuggestion } from './agents.js';
+import {
+  createAgents,
+  createDiffAgents,
+  type ArchitectureDiagramOutput,
+  type DiffAnalysis,
+  type ReadmeSuggestion,
+} from './agents.js';
 import { composeReadmeWithArchitecture, removeMarkdownSection } from './markdown-sections.js';
 import { stripFences } from './readme-utils.js';
 import * as fs from 'node:fs';
@@ -116,70 +122,73 @@ export interface AgentWorkflowOptions {
   model: string;
   readmeTemplate: string;
   agentsTemplate?: string;
+  includeArchitecture?: boolean;
   verbose?: boolean;
 }
 
 export async function runAgentWorkflow(
   options: AgentWorkflowOptions,
 ): Promise<{ readme: string; agents?: string; stats: WorkflowStats }> {
-  const { model, readmeTemplate, agentsTemplate } = options;
+  const { model, readmeTemplate, agentsTemplate, includeArchitecture = true } = options;
 
   const { agentsDocWriter, architectureDiagramAgent, readmeWriter } = createAgents(model, readmeTemplate, agentsTemplate);
   const stats: WorkflowStats = { toolCallCount: 0, toolCallsByAgent: {}, toolCallsByTool: {} };
-  attachToolLogger(architectureDiagramAgent, 'ArchitectureDiagramAgent', stats);
+  if (includeArchitecture) attachToolLogger(architectureDiagramAgent, 'ArchitectureDiagramAgent', stats);
   attachToolLogger(readmeWriter, 'ReadmeWriter', stats);
   if (agentsDocWriter) attachToolLogger(agentsDocWriter, 'AgentsDocWriter', stats);
 
-  const totalSteps = agentsDocWriter ? 2 : 1;
-
-  // README pipeline: ArchitectureDiagramAgent + ReadmeWriter in parallel → deterministic composition → (AgentsDocWriter?)
+  // README pipeline: optional ArchitectureDiagramAgent → ReadmeWriter → deterministic composition → (AgentsDocWriter?)
   const { readme, agents } = await withTrace('ReReadme Agent Workflow', async () => {
-    // Step 1: Generate README body and architecture section concurrently.
-    log.verboseStep(`Step 1/${totalSteps}: README generation (parallel, model: ${model})`);
-    log.verboseStep('ArchitectureDiagramAgent started');
-    const architecturePromise = run(
-      architectureDiagramAgent,
-      'Analyze this repository and produce the README Architecture section decision.',
-      { maxTurns: 25 },
-    ).then((result) => {
+    log.verboseStep(`Generating README (model: ${model})`);
+    let architecture: ArchitectureDiagramOutput | undefined;
+    if (includeArchitecture) {
+      log.detail('ArchitectureDiagramAgent started');
+      const result = await run(
+        architectureDiagramAgent,
+        'Analyze this repository and produce the README Architecture section decision.',
+        { maxTurns: 25 },
+      );
       if (!result.finalOutput) {
         throw new Error('ArchitectureDiagramAgent produced no output');
       }
-      log.verboseStep(
-        `ArchitectureDiagramAgent done (includeDiagram=${result.finalOutput.includeDiagram}, facts=${result.finalOutput.sourceFacts.length})`,
+      architecture = result.finalOutput;
+      log.detail(
+        `ArchitectureDiagramAgent complete (diagram=${architecture.includeDiagram ? 'yes' : 'no'}, facts=${architecture.sourceFacts.length})`,
       );
-      return result.finalOutput;
-    });
+    } else {
+      log.detail('ArchitectureDiagramAgent skipped (--no-architecture)');
+    }
 
-    log.verboseStep('ReadmeWriter started');
-    const readmePromise = run(
+    log.detail('ReadmeWriter started');
+    const readmeResult = await run(
       readmeWriter,
-      `Generate a README.md for this repository.
+      includeArchitecture
+        ? `Generate a README.md for this repository.
 
-The Architecture section is composed by the workflow after README generation. You may omit ## Architecture. If you include it, it will be replaced deterministically.`,
+The Architecture section is composed by the workflow after README generation. Omit ## Architecture from your output; if you include it, it will be replaced deterministically.`
+        : `Generate a README.md for this repository. Omit ## Architecture from your output because architecture generation is disabled.`,
       { maxTurns: 40 },
-    ).then((result) => {
-      if (!result.finalOutput || result.finalOutput.trim().length === 0) {
-        throw new Error('ReadmeWriter produced no output');
-      }
-      log.verboseStep(`ReadmeWriter done (${result.finalOutput.length} chars)`);
-      return stripFences(result.finalOutput);
-    });
+    );
+    if (!readmeResult.finalOutput || readmeResult.finalOutput.trim().length === 0) {
+      throw new Error('ReadmeWriter produced no output');
+    }
+    log.detail(`ReadmeWriter complete (${readmeResult.finalOutput.length} chars)`);
 
-    const [architecture, generatedReadme] = await Promise.all([architecturePromise, readmePromise]);
-    const readmeWithArchitecture = architecture.sectionMarkdown.trim()
-      ? composeReadmeWithArchitecture(generatedReadme, architecture.sectionMarkdown)
+    const generatedReadme = stripFences(readmeResult.finalOutput);
+    const architectureSection = architecture?.sectionMarkdown.trim() ?? '';
+    const readmeWithArchitecture = architectureSection
+      ? composeReadmeWithArchitecture(generatedReadme, architectureSection)
       : removeMarkdownSection(generatedReadme, 'Architecture');
 
-    log.verboseStep(
-      architecture.sectionMarkdown.trim()
+    log.detail(
+      architectureSection
         ? 'Architecture section inserted'
         : 'Architecture section omitted',
     );
 
-    // Step 2 (optional): AgentsDocWriter generates AGENTS.md from the finalized README.
+    // Optional: AgentsDocWriter generates AGENTS.md from the finalized README.
     if (agentsDocWriter) {
-      log.verboseStep(`Step 2/${totalSteps}: AgentsDocWriter`);
+      log.verboseStep('Generating AGENTS.md');
       const initialAgentMdPrompt = `Generate an AGENTS.md for this repository using this finalized README as context:
 
 \`\`\`markdown
@@ -189,7 +198,7 @@ ${readmeWithArchitecture}
       if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
         throw new Error('AgentsDocWriter produced no output');
       }
-      log.verboseStep(`AgentsDocWriter done (${step2.finalOutput.length} chars)`);
+      log.detail(`AgentsDocWriter complete (${step2.finalOutput.length} chars)`);
       return { readme: readmeWithArchitecture, agents: step2.finalOutput };
     }
 

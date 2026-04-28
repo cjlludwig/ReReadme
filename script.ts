@@ -57,6 +57,7 @@ const OPENAI_MODEL = typeof args.model === 'string' ? args.model : 'gpt-5-nano'
 const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
 const GENERATE_AGENTS = Boolean(args.agents)
 const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
+const INCLUDE_ARCHITECTURE = args['no-architecture'] !== true
 const SKIP_BACKUP = Boolean(args['no-backup'])
 const CI_MODE = Boolean(args.ci)
 const APPLY_MODE = Boolean(args.apply)
@@ -339,7 +340,10 @@ export async function runWorkflow(): Promise<void> {
     try {
       const result = await runAgentWorkflow({
         model: OPENAI_MODEL,
-        readmeTemplate, agentsTemplate, verbose: Boolean(args.verbose),
+        readmeTemplate,
+        agentsTemplate,
+        includeArchitecture: INCLUDE_ARCHITECTURE,
+        verbose: Boolean(args.verbose),
       })
       readmeContent = result.readme
       agentsContent = result.agents
@@ -428,6 +432,7 @@ ${pc.yellow('Options:')}
   --check                   Only check dependencies, don't run workflow
   --output FILE             Output to specified file instead of README.md
   --model MODEL             Override the default OpenAI model (default: gpt-5-nano)
+  --no-architecture         Skip ArchitectureDiagramAgent and omit Architecture output
   --no-backup               Skip creating backup files before overwriting
   --agents                  Also generate AGENTS.md (reuses Researcher output from Step 1)
   --agents-output FILE      Output AGENTS.md to specified file (default: AGENTS.md)
@@ -458,6 +463,7 @@ ${pc.yellow('Examples:')}
   rereadme --verbose                          # Show detailed output
   rereadme --check                            # Check dependencies only
   rereadme --model gpt-4o                     # Use a different OpenAI model
+  rereadme --no-architecture                  # Skip architecture diagram generation
   rereadme --output README-v2.md              # Output to custom filename
   rereadme --output README-v2.md     # Output to custom filename
   rereadme --template MY_TEMPLATE.md                # Use a custom README template

@@ -137,44 +137,85 @@ export function createAgents(model: string, readmeTemplate: string, agentsTempla
     name: 'ArchitectureDiagramAgent',
     model,
     outputType: ArchitectureDiagramOutputSchema,
-    instructions: `You are a repository architecture diagram researcher and README section writer. Produce a README-only architecture section that helps a developer understand the system at a macro level.
+    instructions: `You are a repository architecture diagram agent. Produce a concise README architecture section that helps a developer understand the system conceptually at a macro level.
 
-Use the provided read-only repository tools to gather evidence before deciding. Favor get_file_tree first, then read_files, search_code, and get_structure for targeted follow-up. Do not invent services, stores, callers, consumers, protocols, or deployment boundaries.
+## Research strategy
+Use tools in this order: get_file_tree → read_files → search_code → get_structure. Stop when you have enough to characterize topology. Do not invent nodes—except a single illustrative upstream caller (e.g., "Client") when the repo is clearly a service but contains no explicit caller code.
 
-Output contract:
-- Return includeDiagram, sectionMarkdown, rationale, and sourceFacts only.
-- sourceFacts must list concrete facts supported by repository evidence, including paths when possible.
-- rationale must be concise and explain why a diagram is or is not useful.
-- Include a diagram only when the project has non-obvious topology: multiple services, external dependencies, or a request/data flow not inferable from the file structure. Omit it for simple or single-concern repositories.
-- Always include a diagram for gateway, proxy, BFF, microservice front-end, API server with external storage, or service that has configured downstream service URLs, database connection settings, metrics endpoints, queues, caches, or other runtime integration points.
+## Decision rule
+Include a diagram when the repo has non-obvious topology: external dependencies, multiple services, configured downstream URLs/databases/queues/caches, or a request/data flow a reader can't infer from filenames alone. Skip it for single-concern libraries with no runtime integrations.
 
-When includeDiagram=true:
-- sectionMarkdown must be a complete \`## Architecture\` README section.
-- Keep sectionMarkdown short: the heading, at most one plain-English orientation sentence, and exactly one Mermaid fenced code block.
-- Do not include bullet lists, "Key components", "Data flow", file paths, function names, class names, or explanatory implementation inventories in sectionMarkdown.
-- The section must contain exactly one Mermaid fenced code block.
-- The Mermaid diagram must be a concise macro diagram with 3-8 visible nodes and at most 10 edges.
-- Include upstream callers, the repo/application boundary, and downstream services, stores, observability systems, or consumers when those relationships are supported by repository facts.
-- Use shape and color together: node shapes should communicate system type, while colors should communicate stack layer or boundary.
-- Use Mermaid's broadly supported flowchart node shapes for semantic clarity: rounded/stadium for callers or users, rectangles/subroutine boxes for app servers or repo-owned services, cylinders for databases/storage, distinct non-rectangular shapes for queues/caches/events/observability when present, and subgraphs for repo boundaries only when helpful.
-- Use tasteful color contrast to show stack layers and boundaries: callers, the repo/application boundary, downstream services, storage, and observability should have distinct but readable styles.
-- Do not use functions, classes, source files, controllers, services, DAOs, modules, packages, or other internal implementation layers as nodes.
-- Do not infer runtime dependencies from imports alone. Imports can guide research, but diagram facts must be supported by config, entrypoints, README/docs, API clients, environment variables, deployment files, or explicit integration code.
+Always include a diagram for: gateways, proxies, BFFs, API servers with external storage, microservices, or anything with configured downstream service URLs, DB connection strings, queue/cache references, or metrics endpoints.
 
-When includeDiagram=false:
-- sectionMarkdown should be an empty string, unless a minimal non-diagram \`## Architecture\` section is clearly useful from supported facts.
-- Do not include a Mermaid block.
+## Output format
+Return exactly these fields:
+- includeDiagram (bool)
+- sectionMarkdown (string)
+- rationale (one sentence)
+- sourceFacts (list of concrete repo-evidenced facts with paths)
 
-Mermaid requirements:
-- Use \`flowchart LR\`.
-- Every edge must be labeled with short labels using Mermaid pipe syntax, for example \`App -->|HTTP| API\`. Do not emit unlabeled edges.
-- Use short node labels; markdown labels are allowed where useful.
-- Prefer compatible bracket shape syntax over decorative icons, for example \`Client([Client])\`, \`App["API server"]\`, \`Worker[["Worker"]]\`, \`DB[("MongoDB")]\`, and \`Queue{{"Queue"}}\`.
-- An optional repo-boundary subgraph is allowed when it clarifies what is inside this repository.
-- Define all five classDef classes even if some are unused: caller, app, external, storage, and observability. Use distinct, theme-neutral, accessible colors. Prefer tasteful layer contrast over a mostly gray palette: blue callers, indigo application/repo boundary, amber downstream services, green storage, and purple observability.
-- Apply classes to relevant nodes.
-- Avoid icons, images, animations, decorative styling, and theme-specific assumptions.
-- Keep labels stable and readable in GitHub-flavored Markdown.`,
+## When includeDiagram = true
+sectionMarkdown must contain:
+1. A \`## Architecture\` heading
+2. At most one orientation sentence (plain English, conceptual)
+3. Exactly one Mermaid fenced code block
+
+No bullet lists, no component inventories, no file paths, no class/function names.
+
+## Diagram rules
+- \`flowchart LR\`
+- 3–8 nodes, ≤10 edges
+- Every edge labeled with pipe syntax: \`A -->|HTTP| B\`
+- Show: upstream callers, repo boundary (subgraph if helpful), downstream services/stores/observability
+- Nodes represent runtime actors only—no controllers, DAOs, modules, or internal layers
+- Base diagram facts on config, entrypoints, env vars, API clients, or deployment files—not imports alone
+
+## Node shapes
+| Type | Syntax |
+|---|---|
+| Caller / client | \`ID([Label])\` |
+| App server / service | \`ID[Label]\` |
+| Database / storage | \`ID[(Label)]\` |
+| Queue / worker | \`ID[[Label]]\` |
+| Observability | \`ID((Label))\` |
+
+## Diagram structure — order matters
+Emit blocks in this exact order or GitHub will drop styles:
+1. Node declarations (one per line, no edges)
+2. Edge definitions
+3. classDef blocks
+4. class assignments
+
+✓
+\`\`\`
+Gateway[Gateway]
+DB[(Database)]
+Gateway -->|HTTP| DB
+classDef storage fill:#86efac,color:#052e16
+class DB storage
+\`\`\`
+
+✗ \`Gateway[Gateway] -->|HTTP| DB[(Database)]\`
+
+## Edge style conventions
+- \`-->\`   synchronous / HTTP
+- \`-.->\`  async, event-driven, or fire-and-forget
+- \`==>\`   dominant request path (use at most once)
+- Extra dashes push peripheral nodes right: \`App ---->|metrics| Obs\`
+
+## Styling
+\`\`\`
+classDef caller       fill:#93c5fd,color:#1e3a5f
+classDef app          fill:#a5b4fc,color:#1e1b4b
+classDef external     fill:#fcd34d,color:#422006
+classDef storage      fill:#86efac,color:#052e16
+classDef observability fill:#d8b4fe,color:#3b0764
+\`\`\`
+
+Define all five classes even if unused. Apply to every node via \`class ID classname\`.
+
+## When includeDiagram = false
+sectionMarkdown = "" unless a minimal prose Architecture section adds clear value.`,
     tools: [getFileTree, readFiles, searchCode, getStructure],
     handoffDescription: 'Research and write an optional README Architecture section with a concise Mermaid diagram.',
   });
@@ -223,6 +264,7 @@ ${readmeTemplate}
 
 Additional rules:
 - Use clear, concise language for a developer audience.
+- Preserve the template's heading set. Do not add a heading that is absent from the template, even when repository facts would normally fit that topic; place those facts under the nearest relevant template section instead.
 - Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
 - READMEs are written in third-person neutral for descriptions and second-person imperative for instructions, addressed to a developer evaluating or adopting the project. Ensure output is aligned.
 - Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
