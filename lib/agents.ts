@@ -1,4 +1,4 @@
-import { Agent } from '@openai/agents';
+import { Agent, type Tool } from '@openai/agents';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 import { z } from 'zod';
 import { listDirectory, readFile, searchCode, getStructure, getFileTree, readFiles, gitDiff, gitLog, gitDiffStat } from './tools.js';
@@ -130,9 +130,14 @@ Rules:
 }
 
 /**
- * Active README pipeline: ArchitectureDiagramAgent → ReadmeWriter → (AgentsDocWriter?)
+ * Active README pipeline: ArchitectureDiagramAgent for Architecture → single ReadmeWriter with section workspace → (AgentsDocWriter?)
  */
-export function createAgents(model: string, readmeTemplate: string, agentsTemplate?: string) {
+export function createAgents(
+  model: string,
+  _readmeTemplate: string,
+  agentsTemplate?: string,
+  readmeWorkspaceTools: Tool[] = [],
+) {
   const architectureDiagramAgent = new Agent({
     name: 'ArchitectureDiagramAgent',
     model,
@@ -246,29 +251,35 @@ Additional rules:
   const readmeWriter = new Agent({
     name: 'ReadmeWriter',
     model,
-    instructions: `You are a technical doc writer, specializing in README documentation. Using the template and tools provided, write a complete README.md file that adheres to the conventions in the provided template.
+    instructions: `You are a technical doc writer, specializing in README documentation. Use the README todo workspace tools to build a complete README.md one section at a time.
 
 The template is structure and guidance only. It is not the repository being documented. Do not document the template, template examples, placeholder text, or documentation instructions.
 
-Before writing the README, inspect the actual repository with tools:
-1. Call get_file_tree once to map the repository.
-2. Read the manifest, entrypoints, configuration, and existing documentation needed to fill the template.
-3. Iterate through the template sections one by one and use repository facts from those tools to complete each section.
+Before saving README sections, inspect the actual repository with tools:
+1. Call get_file_tree once to map the repository, then do not call it again.
+2. Read the manifest, entrypoints, configuration, templates, existing documentation, and quality/eval files needed to fill the template in one bounded discovery pass.
+3. Call getReadmeTodo to understand the full template-derived task list.
+4. Repeatedly call getNextTodoSection, complete only that active section, and save it with saveReadmeSection before moving on.
+5. Call validateReadmeWorkspace after all sections are saved. If validation reports errors, fix the active/specific section by using the todo tools, then validate again.
 
 ${TEMPLATE_RULES}
 
-README Template:
-\`\`\`\`\`\`markdown
-${readmeTemplate}
-\`\`\`\`\`\`
+The README template is available through the todo workspace tools. Do not ask the user for it and do not reconstruct it from memory.
 
 Additional rules:
 - Use clear, concise language for a developer audience.
+- Prefer facts from the initial discovery pass. Gather new context only when the active section requires a concrete missing fact.
+- When extra context is needed, make one targeted read_files or search_code call for that fact. Do not rediscover the repository or re-read broad file sets.
+- Do not re-read files whose relevant facts are already present in the conversation.
 - Preserve the template's heading set. Do not add a heading that is absent from the template, even when repository facts would normally fit that topic; place those facts under the nearest relevant template section instead.
+- Save each non-preamble section as complete markdown that starts with the exact active heading.
+- Required sections cannot be omitted. Optional sections may be omitted only when repository research found no relevant content, and the save reason must say why.
+- Block a section only when necessary information is genuinely missing, and the save reason must name that missing information.
+- The Architecture section may already be completed by the workflow's architecture specialist. If it is already complete in getReadmeTodo, do not rewrite it.
 - Do NOT repeat information across sections. Each fact belongs in exactly one section — place it where the template guidance says it goes.
 - READMEs are written in third-person neutral for descriptions and second-person imperative for instructions, addressed to a developer evaluating or adopting the project. Ensure output is aligned.
-- Your entire output must be ONLY the raw README markdown — no preamble, no closing commentary, no wrapping code fences`,
-    tools: [getFileTree, readFiles, searchCode, getStructure],
+- Your final response can be brief. The workflow assembles the README deterministically from saved sections, not from your final message.`,
+    tools: [...readmeWorkspaceTools, getFileTree, readFiles, searchCode, getStructure],
   });
 
   return { architectureDiagramAgent, readmeWriter, agentsDocWriter };

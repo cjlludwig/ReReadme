@@ -26,6 +26,7 @@ function initOpenAIClient(): void {
   const baseURL = process.env.OPENAI_BASE_URL
   const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    maxRetries: 8,
     ...(baseURL && { baseURL }),
   })
   setDefaultOpenAIClient(client)
@@ -57,8 +58,8 @@ const OPENAI_MODEL = typeof args.model === 'string' ? args.model : 'gpt-5-nano'
 const OUTPUT_FILE = typeof args.output === 'string' ? args.output : 'README.md'
 const GENERATE_AGENTS = Boolean(args.agents)
 const AGENTS_OUTPUT_FILE = typeof args['agents-output'] === 'string' ? args['agents-output'] : 'AGENTS.md'
-const INCLUDE_ARCHITECTURE = args['no-architecture'] !== true
-const SKIP_BACKUP = Boolean(args['no-backup'])
+const INCLUDE_ARCHITECTURE = args.architecture !== false && args['no-architecture'] !== true
+const SKIP_BACKUP = args.backup === false || args['no-backup'] === true
 const CI_MODE = Boolean(args.ci)
 const APPLY_MODE = Boolean(args.apply)
 const BASE_REF = typeof args['base-ref'] === 'string' ? args['base-ref'] : 'main'

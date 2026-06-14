@@ -1,7 +1,9 @@
 import { expect, describe, it } from '@jest/globals'
 import { ArchitectureDiagramOutputSchema, createAgents } from '../lib/agents.js'
+import { ReadmeWorkspace, createReadmeWorkspaceTools } from '../lib/readme-workspace.js'
 import { applyPatches, renderSuggestions, stripFences } from '../lib/readme-utils.js'
 import { runAgentWorkflow, runDiffWorkflow } from '../lib/runner.js'
+import { invokeTool } from './helpers.js'
 
 describe("stripFences", () => {
     it("strips ```markdown fence from start and end", () => {
@@ -55,6 +57,287 @@ describe("Agent Runner exports", () => {
             sourceFacts: ['package.json defines a CLI entrypoint'],
         })
         expect(parsed.includeDiagram).toBe(true)
+    })
+})
+
+describe("ReadmeWorkspace", () => {
+    const template = [
+        '# {Project Title}',
+        '',
+        '<!-- BADGES (Optional) -->',
+        '',
+        '## Description',
+        '',
+        '> Describe the project.',
+        '',
+        '## Usage',
+        '',
+        '> Show usage.',
+        '',
+        '## References',
+        '',
+        '> (Optional) Links.',
+    ].join('\n')
+
+    it("returns todo sections in template order", async () => {
+        const workspace = new ReadmeWorkspace(template)
+        const tools = createReadmeWorkspaceTools(workspace)
+
+        expect(workspace.hasSection('## Description')).toBe(true)
+        expect(workspace.hasSection('## Missing')).toBe(false)
+        const first = await invokeTool(tools.getNextTodoSection, {})
+        expect(first).toContain('Preamble / title and badges')
+
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo',
+            reason: '',
+        })
+
+        const second = await invokeTool(tools.getNextTodoSection, {})
+        expect(second).toContain('## Description')
+    })
+
+    it("keeps nested template headings inside their top-level section", async () => {
+        const nestedTemplate = [
+            '# Demo',
+            '',
+            '## Getting Started',
+            '',
+            '### Dependencies',
+            '',
+            '> Runtime prerequisites.',
+            '',
+            '### Installation',
+            '',
+            '> Install steps.',
+            '',
+            '## Usage',
+            '',
+            '> Run the tool.',
+        ].join('\n')
+        const workspace = new ReadmeWorkspace(nestedTemplate)
+        const tools = createReadmeWorkspaceTools(workspace)
+
+        await invokeTool(tools.getNextTodoSection, {})
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# Demo',
+            reason: '',
+        })
+
+        const gettingStarted = await invokeTool(tools.getNextTodoSection, {})
+        expect(gettingStarted).toContain('## Getting Started')
+        expect(gettingStarted).toContain('### Dependencies')
+        expect(gettingStarted).toContain('### Installation')
+
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: [
+                '## Getting Started',
+                '',
+                '### Dependencies',
+                '',
+                '- `Node.js >= 22`',
+                '',
+                '### Installation',
+                '',
+                '```shell',
+                'npm install',
+                '```',
+            ].join('\n'),
+            reason: '',
+        })
+
+        const usage = await invokeTool(tools.getNextTodoSection, {})
+        expect(usage).toContain('## Usage')
+        expect(usage).not.toContain('### Dependencies')
+    })
+
+    it("rejects omitted required sections", async () => {
+        const workspace = new ReadmeWorkspace(template)
+        const tools = createReadmeWorkspaceTools(workspace)
+
+        await invokeTool(tools.getNextTodoSection, {})
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo',
+            reason: '',
+        })
+        await invokeTool(tools.getNextTodoSection, {})
+
+        const result = await invokeTool(tools.saveReadmeSection, {
+            status: 'omitted',
+            content: '',
+            reason: 'No description found.',
+        })
+        expect(result).toContain('required and cannot be omitted')
+    })
+
+    it("assembles only saved sections and catches leaked template guidance", () => {
+        const workspace = new ReadmeWorkspace(template)
+        workspace.completeSectionByHeading('## Description', '## Description\n\n> Describe the project.')
+        workspace.completeSectionByHeading('## Usage', '## Usage\n\n```shell\nrereadme --help\n```')
+        workspace.omitSectionByHeading('## References', 'No official references were found.')
+        workspace.saveReadmeSection('complete', '# demo')
+
+        const validation = workspace.validate()
+        expect(validation.valid).toBe(false)
+        expect(validation.errors.join('\n')).toContain('leaked template guidance')
+        expect(validation.readme).toContain('## Usage')
+        expect(validation.readme).not.toContain('## References')
+    })
+
+    it("supports optional heading overrides and a fully valid assembled README", async () => {
+        const workspace = new ReadmeWorkspace(template, { optionalHeadings: ['## References'] })
+        const tools = createReadmeWorkspaceTools(workspace)
+
+        expect(await invokeTool(tools.getCurrentTodoSection, {})).toContain('No active section')
+        expect(await invokeTool(tools.getReadmeTodo, {})).toContain('"required": false')
+
+        await invokeTool(tools.getNextTodoSection, {})
+        expect(await invokeTool(tools.getCurrentTodoSection, {})).toContain('Preamble / title and badges')
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo',
+            reason: '',
+        })
+
+        await invokeTool(tools.getNextTodoSection, {})
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '## Description\n\nA demo project.',
+            reason: '',
+        })
+
+        await invokeTool(tools.getNextTodoSection, {})
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '## Usage\n\n```shell\nrereadme --help\n```',
+            reason: '',
+        })
+
+        await invokeTool(tools.getNextTodoSection, {})
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'omitted',
+            content: '',
+            reason: 'No official references were found.',
+        })
+
+        expect(await invokeTool(tools.getNextTodoSection, {})).toContain('No unfinished')
+        const result = JSON.parse(await invokeTool(tools.validateReadmeWorkspace, {})) as { valid: boolean; readme: string }
+        expect(result.valid).toBe(true)
+        expect(result.readme).toContain('# demo\n\n## Description')
+    })
+
+    it("reports invalid save operations for the active section", async () => {
+        const workspace = new ReadmeWorkspace(template)
+        const tools = createReadmeWorkspaceTools(workspace)
+
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo',
+            reason: '',
+        })).toContain('no active section')
+
+        await invokeTool(tools.getNextTodoSection, {})
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '',
+            reason: '',
+        })).toContain('complete sections require content')
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo\n\n```oops```',
+            reason: '',
+        })).toContain('preamble contains a fenced code block')
+
+        await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '# demo',
+            reason: '',
+        })
+        await invokeTool(tools.getNextTodoSection, {})
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: 'Wrong heading\n\nA demo project.',
+            reason: '',
+        })).toContain('content must start with exact heading')
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '## Description\n\n```\nrereadme\n```',
+            reason: '',
+        })).toContain('fenced code blocks require a language label')
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'complete',
+            content: '## Description\n\nA demo project.\n\n## Usage\n\nDo not save this here.',
+            reason: '',
+        })).toContain('extra top-level heading')
+        expect(await invokeTool(tools.saveReadmeSection, {
+            status: 'blocked',
+            content: '',
+            reason: '',
+        })).toContain('blocked sections require a reason')
+    })
+
+    it("surfaces helper errors and validation edge cases", () => {
+        const duplicateTemplate = [
+            '# Demo',
+            '',
+            '## Same',
+            '',
+            '> First.',
+            '',
+            '## Same',
+            '',
+            '> Second.',
+        ].join('\n')
+        const workspace = new ReadmeWorkspace(duplicateTemplate)
+
+        expect(() => workspace.completeSectionByHeading('## Missing', '## Missing\n\nNope.')).toThrow('Template has no section')
+        expect(() => workspace.omitSectionByHeading('## Missing', 'No section.')).toThrow('Template has no section')
+
+        workspace.completeSectionByHeading('## Same', '## Same\n\nFirst.\n\n## Same\n\nDuplicate.')
+        ;(workspace as unknown as {
+            sections: Array<{ heading: string; level?: number; status: string; content: string; note?: string }>
+        }).sections[0] = {
+            heading: 'Preamble / title and badges',
+            level: 0,
+            status: 'complete',
+            content: '# Demo\n\n```bad```',
+        }
+        ;(workspace as unknown as {
+            sections: Array<{ heading: string; level?: number; status: string; content: string; note?: string }>
+        }).sections[2] = {
+            heading: '## Same',
+            level: 2,
+            status: 'complete',
+            content: '## Same\n\nSecond.\n\n```\nno language\n```\n\n## Extra\n\nWrong section.',
+        }
+        ;(workspace as unknown as {
+            sections: Array<{ heading: string; level?: number; status: string; content: string; note?: string }>
+        }).sections.push(
+            { heading: '## Omitted', status: 'omitted', content: '' },
+            { heading: '## Blocked', status: 'blocked', content: '' },
+            { heading: '## Pending Optional', status: 'pending', content: '' },
+        )
+        const validation = workspace.validate()
+        expect(validation.errors.join('\n')).toContain('appears 3 times')
+        expect(validation.errors.join('\n')).toContain('omitted without a reason')
+        expect(validation.errors.join('\n')).toContain('blocked without a missing-information note')
+        expect(validation.errors.join('\n')).toContain('duplicated in saved sections')
+        expect(validation.errors.join('\n')).toContain('extra top-level heading')
+        expect(validation.errors.join('\n')).toContain('preamble contains a fenced code block')
+        expect(validation.errors.join('\n')).toContain('unlabeled fenced code block')
+        expect(validation.warnings).toContain('Some optional sections are still pending.')
+    })
+
+    it("handles stale active section state defensively", () => {
+        const workspace = new ReadmeWorkspace(template)
+        ;(workspace as unknown as { activeSectionId: string }).activeSectionId = 'missing'
+
+        expect(workspace.getCurrentTodoSection()).toContain('No active section')
+        expect(workspace.saveReadmeSection('complete', '# demo')).toContain('active section no longer exists')
     })
 })
 

@@ -1,0 +1,14 @@
+{
+  "toolCallCount": 20,
+  "toolCallsByAgent": {
+    "ReadmeWriter": 20
+  },
+  "toolCallsByTool": {
+    "get_file_tree": 1,
+    "read_files": 1,
+    "getReadmeTodo": 1,
+    "getNextTodoSection": 7,
+    "saveReadmeSection": 9,
+    "validateReadmeWorkspace": 1
+  }
+}
