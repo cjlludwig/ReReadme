@@ -13,9 +13,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # TEMP(ship-compiled-js): dogfood the compiled-JS action via branch ref.
-      # REVERT to cjlludwig/ReReadme@v0.0.14 (or the released tag) before merging.
-      - uses: cjlludwig/ReReadme@ship-compiled-js
+      - uses: cjlludwig/ReReadme@v0.0.14
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           verbose: 'true'
