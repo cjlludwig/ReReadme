@@ -41,6 +41,9 @@ runs:
       if: steps.node-cache.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ github.action_path }}
+    - run: npm run build
+      shell: bash
+      working-directory: ${{ github.action_path }}
     - run: node ${{ github.action_path }}/bin/rereadme.js --ci --base-ref ${{ inputs.base-ref }} --head-ref HEAD ${{ inputs.verbose == 'true' && '--verbose' || '' }} ${{ inputs.model != '' && format('--model {0}', inputs.model) || '' }}
       shell: bash
       env:

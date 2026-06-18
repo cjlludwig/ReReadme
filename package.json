@@ -1,6 +1,6 @@
 {
   "name": "@cjlludwig/rereadme",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "CLI tool to refresh README automatically with up-to-date information based on code contents, documents, and external sources",
   "type": "module",
   "bin": {
@@ -26,10 +26,7 @@
   },
   "files": [
     "bin/",
-    "lib/",
-    "script.ts",
-    "templates/",
-    ".markdownlint.jsonc"
+    "dist/"
   ],
   "publishConfig": {
     "access": "public",
@@ -37,8 +34,8 @@
   },
   "scripts": {
     "dev": "tsx ./script.ts",
-    "build": "tsc",
-    "start": "node script.js",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc && node -e \"const fs=require('fs');fs.cpSync('templates','dist/templates',{recursive:true});fs.cpSync('.markdownlint.jsonc','dist/.markdownlint.jsonc')\"",
+    "start": "node dist/script.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest ./tests --coverage --coverageReporters=json-summary --cache --cacheDirectory=.cache/jest --silent",
     "test:full": "NODE_OPTIONS=--experimental-vm-modules jest ./tests --coverage --no-cache",
     "lint": "make lint-ts lint-md lint-py lint-pkg",
@@ -57,6 +54,7 @@
     "eval:report": "cd evals && NO_COLOR=1 uv run python evaluate.py",
     "eval:ci": "cd evals && uv run pytest test_ci_mode.py -v",
     "eval:all": "cd evals && uv run pytest -v",
+    "prepack": "npm run build",
     "prepare": "husky || true"
   },
   "dependencies": {
@@ -67,7 +65,6 @@
     "openai": "6.33.0",
     "picocolors": "1.1.1",
     "remark-parse": "11.0.0",
-    "tsx": "4.21.0",
     "unified": "11.0.5",
     "zod": "4.3.6",
     "zx": "8.8.5"
@@ -89,6 +86,7 @@
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
     "publint": "^0.3.12",
+    "tsx": "4.21.0",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.56.0"
   },
