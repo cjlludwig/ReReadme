@@ -194,6 +194,37 @@ describe("read_files", () => {
         const result = await invokeTool(tools.readFiles, { paths: ['lib/tools.ts'], maxLinesEach: 5 })
         expect(result).toContain('[... truncated at 5 lines]')
     })
+
+    it("rejects maxLinesEach above the 400 cap (bounds token footprint)", async () => {
+        const result = await invokeTool(tools.readFiles, { paths: ['package.json'], maxLinesEach: 500 })
+        expect(result).toMatch(/too_big|maximum|invalid/i)
+    })
+})
+
+describe("capFileList", () => {
+    it("joins paths unchanged when under the cap", () => {
+        expect(tools.capFileList(['a.ts', 'b.ts'], 400)).toBe('a.ts\nb.ts')
+    })
+
+    it("returns the no-match message for an empty list", () => {
+        expect(tools.capFileList([])).toBe('No files matched.')
+    })
+
+    it("truncates beyond the cap and appends the truncation marker", () => {
+        const files = Array.from({ length: 450 }, (_, i) => `file-${i}.ts`)
+        const result = tools.capFileList(files, 400)
+        const lines = result.split('\n')
+        // 400 paths + 1 marker line
+        expect(lines).toHaveLength(401)
+        expect(lines[0]).toBe('file-0.ts')
+        expect(lines[399]).toBe('file-399.ts')
+        expect(result).toContain('[... 50 more files truncated; use narrower patterns to focus]')
+    })
+
+    it("defaults the cap to MAX_FILE_TREE_PATHS", () => {
+        const files = Array.from({ length: tools.MAX_FILE_TREE_PATHS + 1 }, (_, i) => `f${i}`)
+        expect(tools.capFileList(files)).toContain('1 more files truncated')
+    })
 })
 
 describe("security: shell injection prevention", () => {

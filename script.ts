@@ -10,6 +10,7 @@ import { OpenAI } from 'openai'
 import { runAgentWorkflow, runDiffWorkflow, type WorkflowStats } from './lib/runner.js'
 import { renderSuggestions, applyPatches } from './lib/readme-utils.js'
 import { validateTemplate } from './lib/validate.js'
+import { enrichApiError } from './lib/errors.js'
 import * as log from './lib/logger.js'
 import pc from 'picocolors'
 
@@ -26,28 +27,16 @@ function initOpenAIClient(): void {
   const baseURL = process.env.OPENAI_BASE_URL
   const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    // Defense-in-depth: the openai SDK honors Retry-After on 429/5xx with its own
+    // backoff. The Agents-SDK runner retry policy (lib/runner.ts) is the primary
+    // guard; this covers any request path not governed by that policy.
+    maxRetries: 3,
+    timeout: 60_000,
     ...(baseURL && { baseURL }),
   })
   setDefaultOpenAIClient(client)
 }
 
-/**
- * Enriches known OpenAI API error messages with actionable fix hints.
- * Currently handles regional hostname 401s from enterprise-managed API keys.
- */
-function enrichApiError(error: unknown): string {
-  const msg = error instanceof Error ? error.message : String(error)
-
-  // Regional hostname error: key is locked to a specific endpoint.
-  // The error message itself contains the correct hostname to use.
-  const regionalMatch = msg.match(/please make your[^.]*request to ([\w.]+)/i)
-  if (regionalMatch) {
-    const suggestedURL = `https://${regionalMatch[1]}/v1`
-    return `${msg}\n${pc.dim(`  Fix: export OPENAI_BASE_URL=${suggestedURL}`)}`
-  }
-
-  return msg
-}
 
 // Configuration — argv is typed as Record<string, unknown> by zx
 const args = argv as Record<string, unknown>
