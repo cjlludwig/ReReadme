@@ -1,4 +1,4 @@
-import { run, withTrace, type Agent } from '@openai/agents';
+import { Runner, retryPolicies, withTrace, type Agent, type RetryPolicy } from '@openai/agents';
 import {
   createAgents,
   createDiffAgents,
@@ -16,6 +16,56 @@ export interface WorkflowStats {
   toolCallsByAgent: Record<string, number>;
   toolCallsByTool: Record<string, number>;
 }
+
+/**
+ * Builds the retry policy used for every model request.
+ *
+ * Composes the SDK's ready-made policies so transient failures — most importantly
+ * org-level 429 rate limits, which are common in shared-org CI — are retried instead
+ * of aborting the run. `providerSuggested` comes first so provider vetoes and
+ * replay-safety signals are honored; `retryAfter` surfaces the provider's explicit
+ * "try again in Ns" hint as the retry delay; `httpStatus` covers 429 plus transient
+ * 5xx/408/409; `networkError` covers transport drops. The wrapper logs each retry
+ * decision via {@link log.detail}, which is automatically gated behind `--verbose`.
+ */
+export function buildRetryPolicy(): RetryPolicy {
+  const composed = retryPolicies.any(
+    retryPolicies.providerSuggested(),
+    retryPolicies.retryAfter(),
+    retryPolicies.httpStatus([408, 409, 429, 500, 502, 503, 504]),
+    retryPolicies.networkError(),
+  );
+  return async (context) => {
+    const decision = await composed(context);
+    const willRetry = typeof decision === 'boolean' ? decision : decision.retry;
+    if (willRetry) {
+      const status = context.normalized.statusCode ?? 'transport error';
+      const explicitDelay = typeof decision === 'object' ? decision.delayMs : undefined;
+      const waitMs = explicitDelay ?? context.normalized.retryAfterMs;
+      const waitNote = waitMs ? `, waiting ~${Math.round(waitMs)}ms` : '';
+      log.detail(
+        `Retrying model request after ${status} (attempt ${context.attempt}/${context.maxRetries}${waitNote})`,
+      );
+    }
+    return decision;
+  };
+}
+
+/**
+ * Shared runner instance reused across every workflow (per SDK guidance — create once,
+ * reuse). Configures runner-level retry with exponential backoff + jitter; explicit
+ * provider/`retry-after` delays are not capped by `backoff.maxDelayMs`, so short hints
+ * like 1.6s are honored directly.
+ */
+const runner = new Runner({
+  modelSettings: {
+    retry: {
+      maxRetries: 5,
+      backoff: { initialDelayMs: 500, maxDelayMs: 8_000, multiplier: 2, jitter: true },
+      policy: buildRetryPolicy(),
+    },
+  },
+});
 
 function summarizeToolCall(name: string, argsJson: string): string {
   try {
@@ -76,7 +126,7 @@ export async function runDiffWorkflow(
   return withTrace('ReReadme Diff Workflow', async () => {
     // Step 1: DiffAnalyzer classifies the changes
     log.verboseStep(`Step 1/2: DiffAnalyzer (${baseRef}...${headRef})`);
-    const step1 = await run(
+    const step1 = await runner.run(
       diffAnalyzer,
       `Analyze the git diff between '${baseRef}' and '${headRef}'. Determine whether the changes warrant a README update and classify what changed.`,
       { maxTurns: 50 },
@@ -99,7 +149,7 @@ export async function runDiffWorkflow(
 
     const patcherPrompt = `Here is the diff analysis:\n\`\`\`json\n${JSON.stringify(analysis, null, 2)}\n\`\`\`\n\nHere is the current README content:\n\`\`\`\n${currentReadme}\n\`\`\`\n\nGenerate README-suggestions.md with targeted suggestions for updating the README based on the analysis.`;
 
-    const step2 = await run(readmePatcher, patcherPrompt, { maxTurns: 10 });
+    const step2 = await runner.run(readmePatcher, patcherPrompt, { maxTurns: 10 });
     if (!step2.finalOutput) {
       throw new Error('ReadmePatcher produced no output');
     }
@@ -143,7 +193,7 @@ export async function runAgentWorkflow(
     let architecture: ArchitectureDiagramOutput | undefined;
     if (includeArchitecture) {
       log.detail('ArchitectureDiagramAgent started');
-      const result = await run(
+      const result = await runner.run(
         architectureDiagramAgent,
         'Analyze this repository and produce the README Architecture section decision.',
         { maxTurns: 25 },
@@ -160,7 +210,7 @@ export async function runAgentWorkflow(
     }
 
     log.detail('ReadmeWriter started');
-    const readmeResult = await run(
+    const readmeResult = await runner.run(
       readmeWriter,
       includeArchitecture
         ? `Generate a README.md for this repository.
@@ -194,7 +244,7 @@ The Architecture section is composed by the workflow after README generation. Om
 \`\`\`markdown
 ${readmeWithArchitecture}
 \`\`\``;
-      const step2 = await run(agentsDocWriter, initialAgentMdPrompt, { maxTurns: 40 });
+      const step2 = await runner.run(agentsDocWriter, initialAgentMdPrompt, { maxTurns: 40 });
       if (!step2.finalOutput || step2.finalOutput.trim().length === 0) {
         throw new Error('AgentsDocWriter produced no output');
       }

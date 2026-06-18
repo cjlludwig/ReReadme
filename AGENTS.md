@@ -45,7 +45,8 @@ The core workflow in `script.ts` is orchestrated by `runWorkflow()`. For the cur
 ### Key Patterns
 
 - OpenAI Agents SDK: (`@openai/agents`): Multi-agent orchestration with handoffs, tools defined via `tool()` helper with zod schemas
-- Filesystem tools: (`lib/tools.ts`): `list_directory`, `read_file`, `search_code`, `get_structure` — all validate paths within `process.cwd()` to prevent traversal
+- Rate-limit resilience: `lib/runner.ts` runs every agent through a shared `Runner` configured with `modelSettings.retry` (`buildRetryPolicy()`: provider-suggested + retry-after + 429/5xx/network, exponential backoff + jitter). The `openai` client also sets `maxRetries`/`timeout` (`script.ts`) as defense-in-depth. Retry decisions are logged under `--verbose`; a terminal 429 is enriched with an actionable hint by `enrichApiError` (`lib/errors.ts`)
+- Filesystem tools: (`lib/tools.ts`): `list_directory`, `read_file`, `search_code`, `get_structure` — all validate paths within `process.cwd()` to prevent traversal. `get_file_tree` caps output at `MAX_FILE_TREE_PATHS` (400) and `read_files` caps lines/file to bound per-request token footprint
 - Shell via zx: Shell commands (markdownlint) use Google's `zx` library with `nothrow` for graceful failures
 - Safe file ops: Timestamped backups (`README.md.backup-<ISO>`) before any overwrite
 - CLI args: Parsed via `zx.argv` — flags include `--help`, `--verbose`, `--interactive`, `--check`, `--output`, `--model`, `--no-backup`, `--agents`, `--agents-output`, `--template FILE`, `--agents-template FILE`

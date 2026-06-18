@@ -7,6 +7,28 @@ import { globby, isGitIgnored } from 'globby';
 
 const ROOT = process.cwd();
 
+/** Maximum number of paths `get_file_tree` returns before truncating. */
+export const MAX_FILE_TREE_PATHS = 400;
+
+/**
+ * Caps a file list to bound the input-token footprint of `get_file_tree`. On large
+ * repos a full tree of thousands of paths can dominate a single model request and
+ * trip the org TPM limit, so anything beyond `max` is dropped and replaced with a
+ * truncation marker that nudges the agent toward narrower patterns.
+ *
+ * @param files - The matched relative paths.
+ * @param max - Maximum paths to include (defaults to {@link MAX_FILE_TREE_PATHS}).
+ * @returns The newline-joined (possibly truncated) listing.
+ */
+export function capFileList(files: string[], max: number = MAX_FILE_TREE_PATHS): string {
+  if (files.length === 0) return 'No files matched.';
+  if (files.length > max) {
+    const shown = files.slice(0, max).join('\n');
+    return `${shown}\n[... ${files.length - max} more files truncated; use narrower patterns to focus]`;
+  }
+  return files.join('\n');
+}
+
 function safePath(relativePath: string): string {
   const resolved = path.resolve(ROOT, relativePath);
   if (!resolved.startsWith(ROOT)) {
@@ -188,7 +210,7 @@ export const getFileTree = tool({
       dot: true,
       ignore: ['.git/**', 'node_modules/**'],
     });
-    return files.length > 0 ? files.join('\n') : 'No files matched.';
+    return capFileList(files);
   },
 });
 
@@ -204,7 +226,7 @@ export const readFiles = tool({
       .describe('Relative paths from repo root'),
     maxLinesEach: z
       .number()
-      .max(500)
+      .max(400)
       .default(300)
       .describe('Max lines to return per file'),
   }),
